@@ -3,10 +3,15 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:food_donation_app/core/theme/app_theme.dart';
 import 'package:food_donation_app/domain/entities/restaurant.dart';
 import 'package:food_donation_app/presentation/providers/app_providers.dart';
+import 'package:food_donation_app/presentation/screens/accept_delivery_screen.dart';
 import 'package:food_donation_app/presentation/widgets/app_card.dart';
+import 'package:food_donation_app/presentation/widgets/primary_button.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-enum RestaurantFilter { all, nearby }
+enum RestaurantFilter {
+  all,
+  nearby
+}
 
 class RunsScreen extends ConsumerStatefulWidget {
   const RunsScreen({super.key});
@@ -67,9 +72,7 @@ class _RunsScreenState extends ConsumerState<RunsScreen> {
             child: restaurants.when(
               data: (items) {
                 // Filter by location if selected
-                final filtered = _selectedFilter == RestaurantFilter.nearby
-                    ? items.where((r) => r.distanceFrom(userLatitude, userLongitude) < 5).toList()
-                    : items;
+                final filtered = _selectedFilter == RestaurantFilter.nearby ? items.where((r) => r.distanceFrom(userLatitude, userLongitude) < 5).toList() : items;
 
                 // Sort by distance
                 final sorted = List<Restaurant>.from(filtered)
@@ -288,36 +291,39 @@ class _RestaurantCard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 12),
-          // Contact and Actions
+          // Actions
           Row(
             children: [
-              if (restaurant.phone.isNotEmpty)
-                Expanded(
-                  child: OutlinedButton.icon(
-                    onPressed: () async {
-                      final url = Uri.parse('tel:${restaurant.phone}');
-                      if (await canLaunchUrl(url)) {
-                        await launchUrl(url);
-                      }
-                    },
-                    icon: const Icon(Icons.phone, size: 16),
-                    label: const Text('Call'),
-                    style: OutlinedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 8),
-                    ),
-                  ),
-                ),
-              if (restaurant.phone.isNotEmpty) const SizedBox(width: 8),
               Expanded(
-                child: ElevatedButton.icon(
+                child: OutlinedButton.icon(
                   onPressed: _openGoogleMaps,
                   icon: const Icon(Icons.directions, size: 16),
                   label: const Text('Navigate'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppTheme.primaryColor,
-                    foregroundColor: Colors.white,
+                  style: OutlinedButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: 8),
                   ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                flex: 2,
+                child: PrimaryButton(
+                  label: 'Accept',
+                  icon: Icons.check_circle,
+                  onPressed: () {
+                    Navigator.of(context)
+                        .push(
+                      MaterialPageRoute(
+                        builder: (context) => AcceptDeliveryScreen(restaurant: restaurant),
+                      ),
+                    )
+                        .then((result) {
+                      // Refresh restaurant list if delivery was accepted
+                      if (result == true) {
+                        ref.invalidate(restaurantsProvider);
+                      }
+                    });
+                  },
                 ),
               ),
             ],

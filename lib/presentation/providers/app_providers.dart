@@ -8,6 +8,7 @@ import 'package:food_donation_app/data/datasources/ngo_remote_datasource.dart';
 import 'package:food_donation_app/data/datasources/mock_delivery_run_data_source.dart';
 import 'package:food_donation_app/data/datasources/mock_restaurant_data_source.dart';
 import 'package:food_donation_app/data/datasources/restaurant_remote_datasource.dart';
+import 'package:food_donation_app/data/datasources/delivery_run_remote_datasource.dart';
 import 'package:food_donation_app/data/repositories/auth_repository_impl.dart';
 import 'package:food_donation_app/data/repositories/food_donation_repository_impl.dart';
 import 'package:food_donation_app/domain/entities/freshness_check.dart';
@@ -104,6 +105,23 @@ final ngoListProvider = FutureProvider((ref) async {
 final deliveryRunsProvider = FutureProvider((ref) async {
   final dataSource = MockDeliveryRunDataSource();
   return await dataSource.fetchDeliveryRuns();
+});
+
+final userDeliveryRunsProvider = FutureProvider((ref) async {
+  try {
+    final authState = ref.watch(authProvider);
+    final token = authState.token;
+    
+    if (token == null) {
+      return <DeliveryRun>[];
+    }
+
+    final deliveryRunDataSource = DeliveryRunRemoteDataSource();
+    return await deliveryRunDataSource.getUserDeliveryRuns();
+  } catch (e) {
+    print('Error fetching user delivery runs: $e');
+    return <DeliveryRun>[];
+  }
 });
 
 final restaurantsProvider = FutureProvider((ref) async {

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:food_donation_app/core/theme/app_theme.dart';
 import 'package:food_donation_app/domain/entities/delivery_run.dart';
+import 'package:food_donation_app/presentation/providers/app_providers.dart';
 import 'package:food_donation_app/presentation/widgets/app_card.dart';
 
 class RideDetailsScreen extends ConsumerStatefulWidget {
@@ -11,8 +12,7 @@ class RideDetailsScreen extends ConsumerStatefulWidget {
   ConsumerState<RideDetailsScreen> createState() => _RideDetailsScreenState();
 }
 
-class _RideDetailsScreenState extends ConsumerState<RideDetailsScreen>
-    with SingleTickerProviderStateMixin {
+class _RideDetailsScreenState extends ConsumerState<RideDetailsScreen> with SingleTickerProviderStateMixin {
   late TabController _tabController;
 
   @override
@@ -29,9 +29,7 @@ class _RideDetailsScreenState extends ConsumerState<RideDetailsScreen>
 
   @override
   Widget build(BuildContext context) {
-    // Mock data for accepted and completed rides
-    final acceptedRides = _getAcceptedRides();
-    final completedRides = _getCompletedRides();
+    final userRuns = ref.watch(userDeliveryRunsProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -47,17 +45,40 @@ class _RideDetailsScreenState extends ConsumerState<RideDetailsScreen>
           indicatorColor: Colors.white,
         ),
       ),
-      body: TabBarView(
-        controller: _tabController,
-        children: [
-          _buildRidesList(acceptedRides, 'accepted'),
-          _buildRidesList(completedRides, 'completed'),
-        ],
+      body: userRuns.when(
+        data: (allRuns) {
+          final acceptedRides = allRuns.where((r) => r.status == 'accepted' || r.status == 'in_progress').toList();
+          final completedRides = allRuns.where((r) => r.status == 'completed').toList();
+
+          return TabBarView(
+            controller: _tabController,
+            children: [
+              _buildRidesList(context, acceptedRides, 'accepted'),
+              _buildRidesList(context, completedRides, 'completed'),
+            ],
+          );
+        },
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (error, _) => Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.error_outline, size: 64, color: Colors.grey[400]),
+              const SizedBox(height: 16),
+              Text('Error loading rides: $error'),
+              const SizedBox(height: 8),
+              TextButton(
+                onPressed: () => ref.invalidate(userDeliveryRunsProvider),
+                child: const Text('Retry'),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
 
-  Widget _buildRidesList(List<DeliveryRun> rides, String status) {
+  Widget _buildRidesList(BuildContext context, List<DeliveryRun> rides, String status) {
     if (rides.isEmpty) {
       return Center(
         child: Column(
@@ -77,12 +98,26 @@ class _RideDetailsScreenState extends ConsumerState<RideDetailsScreen>
             ),
             const SizedBox(height: 8),
             Text(
-              status == 'accepted'
-                  ? 'Accept a run to see it here'
-                  : 'Complete a run to see it here',
+              status == 'accepted' ? 'Accept a delivery to see it here' : 'Complete a delivery to see it here',
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                     color: Colors.grey[500],
                   ),
+            ),
+            const SizedBox(height: 24),
+            ElevatedButton.icon(
+              onPressed: () {
+                // Navigate back and switch to Volunteer tab
+                Navigator.of(context).pop(); // Close ride details
+                // Switch to Volunteer tab (index 1)
+                ref.read(navIndexProvider.notifier).state = 1;
+              },
+              icon: const Icon(Icons.restaurant),
+              label: const Text('Go to Volunteer Page'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.primaryColor,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+              ),
             ),
           ],
         ),
@@ -91,8 +126,7 @@ class _RideDetailsScreenState extends ConsumerState<RideDetailsScreen>
 
     return RefreshIndicator(
       onRefresh: () async {
-        // Refresh logic here
-        setState(() {});
+        ref.invalidate(userDeliveryRunsProvider);
       },
       child: ListView.builder(
         padding: const EdgeInsets.all(16),
@@ -102,87 +136,6 @@ class _RideDetailsScreenState extends ConsumerState<RideDetailsScreen>
         },
       ),
     );
-  }
-
-  List<DeliveryRun> _getAcceptedRides() {
-    final now = DateTime.now();
-    return [
-      DeliveryRun(
-        id: 'RUN-001',
-        restaurantId: 'REST-001',
-        restaurantName: 'Bloom Bistro',
-        restaurantLocation: 'CBD Cluster',
-        restaurantAddress: '123 Main Street, CBD Cluster, New Delhi',
-        restaurantLatitude: 28.6139,
-        restaurantLongitude: 77.2090,
-        restaurantPhone: '+91 98765 43210',
-        ngoId: 'NGO-001',
-        ngoName: 'Hope Foundation',
-        ngoLocation: 'Downtown',
-        ngoAddress: '456 Charity Lane, Downtown, New Delhi',
-        ngoLatitude: 28.7041,
-        ngoLongitude: 77.1025,
-        ngoPhone: '+91 98765 43211',
-        pickupTime: now.add(const Duration(minutes: 30)),
-        deliveryTime: now.add(const Duration(hours: 2)),
-        numberOfMeals: 50,
-        status: 'accepted',
-        description: 'Fresh prepared meals from lunch service',
-        urgencyTag: 'Urgent',
-      ),
-    ];
-  }
-
-  List<DeliveryRun> _getCompletedRides() {
-    final now = DateTime.now();
-    return [
-      DeliveryRun(
-        id: 'RUN-004',
-        restaurantId: 'REST-004',
-        restaurantName: 'Green Garden Cafe',
-        restaurantLocation: 'Park Avenue',
-        restaurantAddress: '789 Park Avenue, New Delhi',
-        restaurantLatitude: 28.5355,
-        restaurantLongitude: 77.3910,
-        restaurantPhone: '+91 98765 43216',
-        ngoId: 'NGO-004',
-        ngoName: 'Helping Hands',
-        ngoLocation: 'Suburb',
-        ngoAddress: '321 Help Street, Suburb, New Delhi',
-        ngoLatitude: 28.6517,
-        ngoLongitude: 77.2213,
-        ngoPhone: '+91 98765 43217',
-        pickupTime: now.subtract(const Duration(days: 1, hours: 2)),
-        deliveryTime: now.subtract(const Duration(days: 1)),
-        numberOfMeals: 40,
-        status: 'completed',
-        description: 'Completed delivery',
-        urgencyTag: 'Flex',
-      ),
-      DeliveryRun(
-        id: 'RUN-005',
-        restaurantId: 'REST-005',
-        restaurantName: 'City Kitchen',
-        restaurantLocation: 'Downtown',
-        restaurantAddress: '555 Food Street, Downtown, New Delhi',
-        restaurantLatitude: 28.6139,
-        restaurantLongitude: 77.2090,
-        restaurantPhone: '+91 98765 43218',
-        ngoId: 'NGO-005',
-        ngoName: 'Food Bank',
-        ngoLocation: 'Central',
-        ngoAddress: '888 Central Road, New Delhi',
-        ngoLatitude: 28.7041,
-        ngoLongitude: 77.1025,
-        ngoPhone: '+91 98765 43219',
-        pickupTime: now.subtract(const Duration(days: 2, hours: 3)),
-        deliveryTime: now.subtract(const Duration(days: 2, hours: 1)),
-        numberOfMeals: 60,
-        status: 'completed',
-        description: 'Completed delivery',
-        urgencyTag: 'Urgent',
-      ),
-    ];
   }
 }
 
@@ -239,9 +192,7 @@ class _RideCard extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                 decoration: BoxDecoration(
-                  color: isCompleted
-                      ? Colors.green.withOpacity(0.1)
-                      : AppTheme.primaryColor.withOpacity(0.1),
+                  color: isCompleted ? Colors.green.withOpacity(0.1) : AppTheme.primaryColor.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Text(
@@ -346,4 +297,3 @@ class _InfoChip extends StatelessWidget {
     );
   }
 }
-
