@@ -42,7 +42,7 @@ extension AppTabX on AppTab {
       case AppTab.home:
         return 'Share Bites';
       case AppTab.runs:
-        return 'Runs';
+        return 'Volunteer';
       case AppTab.impact:
         return 'Impact';
       case AppTab.community:

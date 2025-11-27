@@ -5,6 +5,7 @@ import 'package:food_donation_app/data/datasources/auth_remote_datasource.dart';
 import 'package:food_donation_app/data/datasources/mock_food_donation_data_source.dart';
 import 'package:food_donation_app/data/datasources/mock_ngo_data_source.dart';
 import 'package:food_donation_app/data/datasources/ngo_remote_datasource.dart';
+import 'package:food_donation_app/data/datasources/mock_delivery_run_data_source.dart';
 import 'package:food_donation_app/data/repositories/auth_repository_impl.dart';
 import 'package:food_donation_app/data/repositories/food_donation_repository_impl.dart';
 import 'package:food_donation_app/domain/entities/freshness_check.dart';
@@ -96,6 +97,11 @@ final ngoListProvider = FutureProvider((ref) async {
     final dataSource = ref.watch(mockNgoDataSourceProvider);
     return await dataSource.fetchNGOs();
   }
+});
+
+final deliveryRunsProvider = FutureProvider((ref) async {
+  final dataSource = MockDeliveryRunDataSource();
+  return await dataSource.fetchDeliveryRuns();
 });
 
 final navIndexProvider = StateProvider<int>((ref) => 0);

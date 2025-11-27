@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:food_donation_app/core/theme/app_theme.dart';
+import 'package:food_donation_app/domain/entities/delivery_run.dart';
 import 'package:food_donation_app/presentation/providers/app_providers.dart';
+import 'package:food_donation_app/presentation/screens/delivery_run_detail_screen.dart';
 import 'package:food_donation_app/presentation/widgets/app_card.dart';
 import 'package:food_donation_app/presentation/widgets/primary_button.dart';
 import 'package:food_donation_app/presentation/widgets/secondary_button.dart';
@@ -20,7 +22,7 @@ class _RunsScreenState extends ConsumerState<RunsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final alerts = ref.watch(logisticsAlertsProvider);
+    final runs = ref.watch(deliveryRunsProvider);
 
     return Column(
       children: [
@@ -69,9 +71,9 @@ class _RunsScreenState extends ConsumerState<RunsScreen> {
         Expanded(
           child: RefreshIndicator(
             onRefresh: () async {
-              ref.invalidate(logisticsAlertsProvider);
+              ref.invalidate(deliveryRunsProvider);
             },
-            child: alerts.when(
+            child: runs.when(
               data: (items) {
                 final filtered = _filterRuns(items);
                 if (filtered.isEmpty) {
@@ -114,7 +116,7 @@ class _RunsScreenState extends ConsumerState<RunsScreen> {
                     Text('Error loading runs'),
                     const SizedBox(height: 8),
                     TextButton(
-                      onPressed: () => ref.invalidate(logisticsAlertsProvider),
+                      onPressed: () => ref.invalidate(deliveryRunsProvider),
                       child: const Text('Retry'),
                     ),
                   ],
@@ -127,7 +129,7 @@ class _RunsScreenState extends ConsumerState<RunsScreen> {
     );
   }
 
-  List<dynamic> _filterRuns(List<dynamic> runs) {
+  List<DeliveryRun> _filterRuns(List<DeliveryRun> runs) {
     final now = DateTime.now();
     final tonight = DateTime(now.year, now.month, now.day, 23, 59);
 
@@ -135,16 +137,13 @@ class _RunsScreenState extends ConsumerState<RunsScreen> {
       case RunFilter.all:
         return runs;
       case RunFilter.urgent:
-        return runs.where((r) =>
-            r.urgencyTag.contains('Urgent') ||
-            r.urgencyTag.contains('Flash') ||
-            r.expiry.difference(now).inMinutes < 60).toList();
+        return runs.where((r) => r.isUrgent || r.pickupTime.difference(now).inMinutes < 60).toList();
       case RunFilter.flex:
-        return runs.where((r) => r.expiry.difference(now).inHours > 4).toList();
+        return runs.where((r) => !r.isUrgent && r.pickupTime.difference(now).inHours > 4).toList();
       case RunFilter.nearby:
-        return runs.where((r) => r.radiusKm < 5).toList();
+        return runs.where((r) => r.distanceKm < 5).toList();
       case RunFilter.tonight:
-        return runs.where((r) => r.expiry.isBefore(tonight)).toList();
+        return runs.where((r) => r.deliveryTime.isBefore(tonight)).toList();
     }
   }
 }
@@ -175,13 +174,13 @@ class _FilterChip extends StatelessWidget {
 class _RunCard extends StatelessWidget {
   const _RunCard({required this.run});
 
-  final dynamic run;
+  final DeliveryRun run;
 
   @override
   Widget build(BuildContext context) {
     final now = DateTime.now();
-    final timeLeft = run.expiry.difference(now);
-    final isUrgent = timeLeft.inMinutes < 60;
+    final timeUntilPickup = run.pickupTime.difference(now);
+    final isUrgent = run.isUrgent || timeUntilPickup.inMinutes < 60;
 
     return AppCard(
       child: Column(
@@ -194,15 +193,41 @@ class _RunCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      run.donorName,
-                      style: Theme.of(context).textTheme.titleLarge,
+                      run.restaurantName,
+                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                            fontWeight: FontWeight.bold,
+                          ),
                     ),
                     const SizedBox(height: 4),
-                    Text(
-                      '${run.location} → Drop Point',
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            color: Colors.grey[600],
+                    Row(
+                      children: [
+                        Icon(Icons.location_on, size: 14, color: Colors.grey[600]),
+                        const SizedBox(width: 4),
+                        Expanded(
+                          child: Text(
+                            run.restaurantLocation,
+                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                  color: Colors.grey[600],
+                                ),
                           ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        Icon(Icons.business, size: 14, color: Colors.grey[600]),
+                        const SizedBox(width: 4),
+                        Expanded(
+                          child: Text(
+                            '→ ${run.ngoName}',
+                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                  color: AppTheme.primaryColor,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),
@@ -230,13 +255,19 @@ class _RunCard extends StatelessWidget {
             children: [
               _InfoChip(
                 icon: Icons.access_time,
-                label: _formatDuration(timeLeft),
+                label: _formatTime(run.pickupTime),
                 color: isUrgent ? AppTheme.accentColor : AppTheme.primaryColor,
               ),
               const SizedBox(width: 8),
               _InfoChip(
                 icon: Icons.straighten,
-                label: '${run.radiusKm.toStringAsFixed(1)} km',
+                label: '${run.distanceKm.toStringAsFixed(1)} km',
+                color: AppTheme.primaryColor,
+              ),
+              const SizedBox(width: 8),
+              _InfoChip(
+                icon: Icons.restaurant_menu,
+                label: '${run.numberOfMeals} meals',
                 color: AppTheme.primaryColor,
               ),
             ],
@@ -248,9 +279,10 @@ class _RunCard extends StatelessWidget {
                 child: PrimaryButton(
                   label: 'Accept Run',
                   onPressed: () {
-                    // Handle accept
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('Accepted run from ${run.donorName}')),
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (context) => DeliveryRunDetailScreen(run: run),
+                      ),
                     );
                   },
                 ),
@@ -261,7 +293,9 @@ class _RunCard extends StatelessWidget {
                 icon: Icons.group,
                 isCompact: true,
                 onPressed: () {
-                  // Handle ping squad
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Pinged squad members')),
+                  );
                 },
               ),
             ],
@@ -271,14 +305,10 @@ class _RunCard extends StatelessWidget {
     );
   }
 
-  String _formatDuration(Duration duration) {
-    if (duration.isNegative) return 'Expired';
-    final hours = duration.inHours;
-    final minutes = duration.inMinutes % 60;
-    if (hours > 0) {
-      return '${hours}h ${minutes}m';
-    }
-    return '${minutes}m';
+  String _formatTime(DateTime dateTime) {
+    final hour = dateTime.hour.toString().padLeft(2, '0');
+    final minute = dateTime.minute.toString().padLeft(2, '0');
+    return '$hour:$minute';
   }
 }
 
