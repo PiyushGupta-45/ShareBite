@@ -6,7 +6,7 @@ class User {
     this.picture,
     this.isEmailVerified = false,
     this.authProvider = 'email',
-    this.role = 'user', // 'user' or 'admin'
+    this.role = 'user', // 'user', 'admin', 'restaurant', or 'ngo_admin'
   });
 
   final String id;
@@ -15,9 +15,12 @@ class User {
   final String? picture;
   final bool isEmailVerified;
   final String authProvider;
-  final String role; // 'user' or 'admin'
+  final String role; // 'user', 'admin', 'restaurant', or 'ngo_admin'
 
   bool get isAdmin => role.toLowerCase() == 'admin';
+  bool get isRestaurant => role.toLowerCase() == 'restaurant';
+  bool get isNgoAdmin => role.toLowerCase() == 'ngo_admin';
+  bool get isVolunteer => role.toLowerCase() == 'user';
 
   factory User.fromJson(Map<String, dynamic> json) {
     return User(

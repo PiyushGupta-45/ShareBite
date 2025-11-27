@@ -8,6 +8,8 @@ import 'package:food_donation_app/presentation/screens/login_screen.dart';
 import 'package:food_donation_app/presentation/screens/ngo_home_screen.dart';
 import 'package:food_donation_app/presentation/screens/profile_screen.dart';
 import 'package:food_donation_app/presentation/screens/runs_screen.dart';
+import 'package:food_donation_app/presentation/screens/ngo_needs_screen.dart';
+import 'package:food_donation_app/presentation/screens/create_demand_screen.dart';
 
 void main() {
   runApp(const ProviderScope(child: FoodDonationApp()));
@@ -37,11 +39,16 @@ enum AppTab {
 }
 
 extension AppTabX on AppTab {
-  String get label {
+  String getLabel(String? userRole) {
     switch (this) {
       case AppTab.home:
         return 'Share Bites';
       case AppTab.runs:
+        if (userRole == 'restaurant') {
+          return 'NGO Needs';
+        } else if (userRole == 'ngo_admin') {
+          return 'Create Demand';
+        }
         return 'Volunteer';
       case AppTab.impact:
         return 'Activity';
@@ -71,10 +78,18 @@ class HomeShell extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final index = ref.watch(navIndexProvider);
     final tab = AppTab.values[index];
+    final authState = ref.watch(authProvider);
+    final user = authState.user;
+    final userRole = user?.role;
 
+    // Determine which screen to show based on tab and user role
     final screen = switch (tab) {
       AppTab.home => const NgoHomeScreen(),
-      AppTab.runs => const RunsScreen(),
+      AppTab.runs => userRole == 'restaurant'
+          ? const NgoNeedsScreen()
+          : userRole == 'ngo_admin'
+              ? const CreateDemandScreen()
+              : const RunsScreen(),
       AppTab.impact => const ImpactScreen(),
       AppTab.community => const CommunityHubScreen(),
     };
@@ -82,7 +97,7 @@ class HomeShell extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(
         title: Text(
-          tab.label,
+          tab.getLabel(userRole),
           style: const TextStyle(
             fontSize: 28,
             fontWeight: FontWeight.bold,
@@ -91,16 +106,29 @@ class HomeShell extends ConsumerWidget {
         elevation: 0,
         toolbarHeight: 80,
         actions: [
-          IconButton(
-            icon: const Icon(Icons.account_circle, size: 32),
-            onPressed: () {
-              Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (context) => const ProfileScreen(),
-                ),
-              );
-            },
-            tooltip: 'Profile',
+          Padding(
+            padding: const EdgeInsets.only(right: 8.0),
+            child: GestureDetector(
+              onTap: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (context) => const ProfileScreen(),
+                  ),
+                );
+              },
+              child: CircleAvatar(
+                radius: 24,
+                backgroundColor: AppTheme.primaryColor.withOpacity(0.1),
+                backgroundImage: user?.picture != null && user!.picture!.isNotEmpty ? NetworkImage(user.picture!) : null,
+                child: user?.picture == null || (user?.picture?.isEmpty ?? true)
+                    ? Icon(
+                        Icons.account_circle,
+                        size: 48,
+                        color: AppTheme.primaryColor,
+                      )
+                    : null,
+              ),
+            ),
           ),
         ],
       ),
@@ -111,7 +139,7 @@ class HomeShell extends ConsumerWidget {
         destinations: AppTab.values.map((tab) {
           return NavigationDestination(
             icon: Icon(tab.icon),
-            label: tab.label,
+            label: tab.getLabel(userRole),
           );
         }).toList(),
       ),

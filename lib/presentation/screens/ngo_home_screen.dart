@@ -120,13 +120,13 @@ class _NgoHomeScreenState extends ConsumerState<NgoHomeScreen> {
                 ),
                 // NGO Grid
                 SliverPadding(
-                  padding: const EdgeInsets.all(16),
+                  padding: const EdgeInsets.all(5),
                   sliver: SliverGrid(
                     gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                       crossAxisCount: 2,
-                      crossAxisSpacing: 16,
-                      mainAxisSpacing: 16,
-                      childAspectRatio: 1.1, // Wider cards with slightly more height
+                      crossAxisSpacing: 0,
+                      mainAxisSpacing: 10,
+                      childAspectRatio: .9, // Taller cards to prevent overflow
                     ),
                     delegate: SliverChildBuilderDelegate(
                       (context, index) {
@@ -234,11 +234,10 @@ class _NgoCard extends StatelessWidget {
         },
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
-          mainAxisSize: MainAxisSize.min,
           children: [
             // Main Image
             Expanded(
-              flex: 4,
+              flex: 3,
               child: Stack(
                 children: [
                   Container(
@@ -252,30 +251,45 @@ class _NgoCard extends StatelessWidget {
                         ],
                       ),
                     ),
-                    child: Image.network(
-                      ngo.mainImage,
-                      fit: BoxFit.cover,
-                      width: double.infinity,
-                      errorBuilder: (context, error, stackTrace) {
-                        return Container(
-                          color: AppTheme.primaryColor.withOpacity(0.1),
-                          child: Icon(
-                            Icons.restaurant,
-                            size: 48,
-                            color: AppTheme.primaryColor.withOpacity(0.5),
+                    child: ngo.mainImage.isNotEmpty
+                        ? Container(
+                            width: double.infinity,
+                            height: double.infinity,
+                            color: Colors.grey[100],
+                            child: Image.network(
+                              ngo.mainImage,
+                              fit: BoxFit.contain,
+                              width: double.infinity,
+                              height: double.infinity,
+                              errorBuilder: (context, error, stackTrace) {
+                                return Container(
+                                  color: AppTheme.primaryColor.withOpacity(0.1),
+                                  child: Icon(
+                                    Icons.business,
+                                    size: 48,
+                                    color: AppTheme.primaryColor.withOpacity(0.5),
+                                  ),
+                                );
+                              },
+                              loadingBuilder: (context, child, loadingProgress) {
+                                if (loadingProgress == null) return child;
+                                return Center(
+                                  child: CircularProgressIndicator(
+                                    value: loadingProgress.expectedTotalBytes != null ? loadingProgress.cumulativeBytesLoaded / loadingProgress.expectedTotalBytes! : null,
+                                    strokeWidth: 2,
+                                  ),
+                                );
+                              },
+                            ),
+                          )
+                        : Container(
+                            color: AppTheme.primaryColor.withOpacity(0.1),
+                            child: Icon(
+                              Icons.business,
+                              size: 48,
+                              color: AppTheme.primaryColor.withOpacity(0.5),
+                            ),
                           ),
-                        );
-                      },
-                      loadingBuilder: (context, child, loadingProgress) {
-                        if (loadingProgress == null) return child;
-                        return Center(
-                          child: CircularProgressIndicator(
-                            value: loadingProgress.expectedTotalBytes != null ? loadingProgress.cumulativeBytesLoaded / loadingProgress.expectedTotalBytes! : null,
-                            strokeWidth: 2,
-                          ),
-                        );
-                      },
-                    ),
                   ),
                   // Distance Badge
                   Positioned(
@@ -320,12 +334,11 @@ class _NgoCard extends StatelessWidget {
             ),
             // Name, Location and Tagline
             Expanded(
-              flex: 3,
+              flex: 2,
               child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Text(
@@ -333,12 +346,12 @@ class _NgoCard extends StatelessWidget {
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
                             fontWeight: FontWeight.bold,
                             color: AppTheme.primaryColor,
-                            fontSize: 15,
+                            fontSize: 16,
                           ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
-                    const SizedBox(height: 6),
+                    const SizedBox(height: 4),
                     Row(
                       children: [
                         Icon(
@@ -347,7 +360,7 @@ class _NgoCard extends StatelessWidget {
                           color: Colors.grey[600],
                         ),
                         const SizedBox(width: 4),
-                        Flexible(
+                        Expanded(
                           child: Text(
                             ngo.location,
                             style: Theme.of(context).textTheme.bodySmall?.copyWith(
@@ -360,13 +373,13 @@ class _NgoCard extends StatelessWidget {
                         ),
                       ],
                     ),
-                    const SizedBox(height: 6),
-                    Flexible(
+                    const SizedBox(height: 4),
+                    Expanded(
                       child: Text(
                         ngo.tagline,
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
                               color: Colors.grey[600],
-                              fontSize: 12,
+                              fontSize: 11,
                             ),
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
