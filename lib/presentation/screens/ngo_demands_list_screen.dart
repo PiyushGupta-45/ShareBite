@@ -57,6 +57,11 @@ class _NgoDemandsListScreenState extends ConsumerState<NgoDemandsListScreen> {
     final ngos = ref.watch(ngoListProvider);
 
     return Scaffold(
+      appBar: AppBar(
+        title: const Text('My Demands'),
+        elevation: 0,
+      ),
+      backgroundColor: Colors.white,
       body: Column(
         children: [
           // NGO Selection
@@ -100,19 +105,46 @@ class _NgoDemandsListScreenState extends ConsumerState<NgoDemandsListScreen> {
           // Demands List
           if (_selectedNgoId != null)
             Expanded(
-              child: _DemandsList(ngoId: _selectedNgoId!),
+              child: _DemandsList(
+                ngoId: _selectedNgoId!,
+                onRefresh: () {
+                  ref.invalidate(ngoAdminDemandsProvider(_selectedNgoId!));
+                },
+              ),
+            )
+          else
+            const Expanded(
+              child: Center(
+                child: Text('Please select an NGO'),
+              ),
             ),
         ],
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () async {
+          if (_selectedNgoId == null) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Please select an NGO first'),
+                backgroundColor: Colors.orange,
+              ),
+            );
+            return;
+          }
+
           final result = await Navigator.of(context).push(
             MaterialPageRoute(
               builder: (context) => const CreateDemandScreen(),
             ),
           );
-          if (result == true && _selectedNgoId != null) {
-            ref.invalidate(ngoAdminDemandsProvider(_selectedNgoId!));
+
+          if (mounted) {
+            if (result == true && _selectedNgoId != null) {
+              // Refresh the demands list
+              ref.invalidate(ngoAdminDemandsProvider(_selectedNgoId!));
+              // Also refresh NGO list in case a new one was created
+              ref.invalidate(ngoListProvider);
+            }
           }
         },
         icon: const Icon(Icons.add),
@@ -124,9 +156,13 @@ class _NgoDemandsListScreenState extends ConsumerState<NgoDemandsListScreen> {
 }
 
 class _DemandsList extends ConsumerWidget {
-  const _DemandsList({required this.ngoId});
+  const _DemandsList({
+    required this.ngoId,
+    this.onRefresh,
+  });
 
   final String ngoId;
+  final VoidCallback? onRefresh;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -160,6 +196,7 @@ class _DemandsList extends ConsumerWidget {
         return RefreshIndicator(
           onRefresh: () async {
             ref.invalidate(ngoAdminDemandsProvider(ngoId));
+            onRefresh?.call();
           },
           child: ListView.builder(
             padding: const EdgeInsets.all(16),

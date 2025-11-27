@@ -124,7 +124,7 @@ class _CreateDemandScreenState extends ConsumerState<CreateDemandScreen> {
       );
 
       final dataSource = NgoDemandRemoteDataSource();
-      
+
       if (widget.demand != null) {
         // Update existing demand
         await dataSource.updateDemand(
@@ -133,9 +133,7 @@ class _CreateDemandScreenState extends ConsumerState<CreateDemandScreen> {
           amount: int.parse(_amountController.text.trim()),
           unit: _selectedUnit,
           requiredBy: requiredBy,
-          description: _descriptionController.text.trim().isNotEmpty
-              ? _descriptionController.text.trim()
-              : null,
+          description: _descriptionController.text.trim().isNotEmpty ? _descriptionController.text.trim() : null,
         );
 
         if (mounted) {
@@ -143,9 +141,15 @@ class _CreateDemandScreenState extends ConsumerState<CreateDemandScreen> {
             const SnackBar(
               content: Text('Demand updated successfully!'),
               backgroundColor: Colors.green,
+              duration: Duration(seconds: 2),
             ),
           );
-          Navigator.of(context).pop(true);
+
+          await Future.delayed(const Duration(milliseconds: 500));
+
+          if (mounted) {
+            Navigator.of(context).pop(true);
+          }
         }
       } else {
         // Create new demand
@@ -153,26 +157,32 @@ class _CreateDemandScreenState extends ConsumerState<CreateDemandScreen> {
         if (ngoId == null) {
           throw Exception('NGO ID is required');
         }
-        
+
         await dataSource.createDemand(
           token: token,
           ngoId: ngoId,
           amount: int.parse(_amountController.text.trim()),
           unit: _selectedUnit,
           requiredBy: requiredBy,
-          description: _descriptionController.text.trim().isNotEmpty
-              ? _descriptionController.text.trim()
-              : null,
+          description: _descriptionController.text.trim().isNotEmpty ? _descriptionController.text.trim() : null,
         );
 
         if (mounted) {
+          // Show success message
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
               content: Text('Demand created successfully!'),
               backgroundColor: Colors.green,
+              duration: Duration(seconds: 2),
             ),
           );
-          Navigator.of(context).pop(true);
+
+          // Wait a bit for the snackbar to show, then pop
+          await Future.delayed(const Duration(milliseconds: 500));
+
+          if (mounted) {
+            Navigator.of(context).pop(true);
+          }
         }
       }
     } catch (e) {
@@ -311,13 +321,9 @@ class _CreateDemandScreenState extends ConsumerState<CreateDemandScreen> {
                                 prefixIcon: Icon(Icons.calendar_today),
                               ),
                               child: Text(
-                                _selectedDate != null
-                                    ? DateFormat('dd/MM/yyyy').format(_selectedDate!)
-                                    : 'Select date',
+                                _selectedDate != null ? DateFormat('dd/MM/yyyy').format(_selectedDate!) : 'Select date',
                                 style: TextStyle(
-                                  color: _selectedDate != null
-                                      ? Colors.black
-                                      : Colors.grey[600],
+                                  color: _selectedDate != null ? Colors.black : Colors.grey[600],
                                 ),
                               ),
                             ),
@@ -333,13 +339,9 @@ class _CreateDemandScreenState extends ConsumerState<CreateDemandScreen> {
                                 prefixIcon: Icon(Icons.access_time),
                               ),
                               child: Text(
-                                _selectedTime != null
-                                    ? _selectedTime!.format(context)
-                                    : 'Select time',
+                                _selectedTime != null ? _selectedTime!.format(context) : 'Select time',
                                 style: TextStyle(
-                                  color: _selectedTime != null
-                                      ? Colors.black
-                                      : Colors.grey[600],
+                                  color: _selectedTime != null ? Colors.black : Colors.grey[600],
                                 ),
                               ),
                             ),
@@ -373,9 +375,7 @@ class _CreateDemandScreenState extends ConsumerState<CreateDemandScreen> {
               ),
               const SizedBox(height: 24),
               PrimaryButton(
-                label: _isLoading
-                    ? (widget.demand != null ? 'Updating...' : 'Creating...')
-                    : (widget.demand != null ? 'Update Demand' : 'Create Demand'),
+                label: _isLoading ? (widget.demand != null ? 'Updating...' : 'Creating...') : (widget.demand != null ? 'Update Demand' : 'Create Demand'),
                 onPressed: _isLoading ? null : () => _submitForm(ref),
               ),
               const SizedBox(height: 12),
@@ -391,4 +391,3 @@ class _CreateDemandScreenState extends ConsumerState<CreateDemandScreen> {
     );
   }
 }
-
