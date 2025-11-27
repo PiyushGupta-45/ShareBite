@@ -1,6 +1,7 @@
 import 'dart:math';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 import 'package:food_donation_app/data/datasources/auth_remote_datasource.dart';
 import 'package:food_donation_app/data/datasources/mock_food_donation_data_source.dart';
 import 'package:food_donation_app/data/datasources/mock_ngo_data_source.dart';
@@ -371,6 +372,16 @@ class AuthNotifier extends StateNotifier<AuthState> {
   }
 
   Future<void> signOut() async {
+    // Sign out from Google Sign-In to clear cached account
+    try {
+      final GoogleSignIn googleSignIn = GoogleSignIn();
+      await googleSignIn.signOut();
+    } catch (e) {
+      // Ignore errors if user wasn't signed in with Google
+      print('Error signing out from Google: $e');
+    }
+    
+    // Clear local storage
     await _authRepository.signOut();
     state = const AuthState();
   }
