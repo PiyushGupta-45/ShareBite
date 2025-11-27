@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:food_donation_app/core/theme/app_theme.dart';
+import 'package:food_donation_app/data/datasources/restaurant_remote_datasource.dart';
+import 'package:food_donation_app/presentation/providers/app_providers.dart';
 import 'package:food_donation_app/presentation/widgets/app_card.dart';
 import 'package:food_donation_app/presentation/widgets/primary_button.dart';
 import 'package:food_donation_app/presentation/widgets/secondary_button.dart';
@@ -42,7 +44,7 @@ class _AddRestaurantScreenState extends ConsumerState<AddRestaurantScreen> {
     super.dispose();
   }
 
-  Future<void> _submitForm() async {
+  Future<void> _submitForm(WidgetRef ref) async {
     if (!_formKey.currentState!.validate()) {
       return;
     }
@@ -52,9 +54,33 @@ class _AddRestaurantScreenState extends ConsumerState<AddRestaurantScreen> {
     });
 
     try {
-      // TODO: Implement API call to add restaurant
-      // For now, just show success message
-      await Future.delayed(const Duration(seconds: 1));
+      final authState = ref.read(authProvider);
+      final token = authState.token;
+
+      if (token == null) {
+        throw Exception('Not authenticated. Please sign in again.');
+      }
+
+      final restaurantDataSource = RestaurantRemoteDataSource();
+      await restaurantDataSource.createRestaurant(
+        token: token,
+        name: _nameController.text.trim(),
+        location: _locationController.text.trim(),
+        address: _addressController.text.trim(),
+        latitude: double.parse(_latitudeController.text.trim()),
+        longitude: double.parse(_longitudeController.text.trim()),
+        email: _emailController.text.trim(),
+        phone: _phoneController.text.trim(),
+        description: _descriptionController.text.trim().isNotEmpty
+            ? _descriptionController.text.trim()
+            : null,
+        website: _websiteController.text.trim().isNotEmpty
+            ? _websiteController.text.trim()
+            : null,
+        image: _imageUrlController.text.trim().isNotEmpty
+            ? _imageUrlController.text.trim()
+            : null,
+      );
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -63,7 +89,7 @@ class _AddRestaurantScreenState extends ConsumerState<AddRestaurantScreen> {
             backgroundColor: Colors.green,
           ),
         );
-        Navigator.of(context).pop();
+        Navigator.of(context).pop(true); // Return true to indicate success
       }
     } catch (e) {
       if (mounted) {
@@ -71,6 +97,7 @@ class _AddRestaurantScreenState extends ConsumerState<AddRestaurantScreen> {
           SnackBar(
             content: Text('Error: ${e.toString()}'),
             backgroundColor: Colors.red,
+            duration: const Duration(seconds: 4),
           ),
         );
       }
@@ -302,7 +329,7 @@ class _AddRestaurantScreenState extends ConsumerState<AddRestaurantScreen> {
               const SizedBox(height: 24),
               PrimaryButton(
                 label: _isLoading ? 'Adding...' : 'Add Restaurant',
-                onPressed: _isLoading ? null : _submitForm,
+                onPressed: _isLoading ? null : () => _submitForm(ref),
               ),
               const SizedBox(height: 12),
               SecondaryButton(

@@ -9,6 +9,7 @@ dotenv.config();
 import connectDB from './config/database.js';
 import authRoutes from './routes/authRoutes.js';
 import ngoRoutes from './routes/ngoRoutes.js';
+import restaurantRoutes from './routes/restaurantRoutes.js';
 
 // Validate required environment variables
 const requiredEnvVars = ['MONGODB_URI', 'JWT_SECRET', 'GOOGLE_CLIENT_ID'];
@@ -106,6 +107,7 @@ app.get('/api/test', (req, res) => {
 // API Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/ngos', ngoRoutes);
+app.use('/api/restaurants', restaurantRoutes);
 
 // Error handling middleware
 app.use((err, req, res, next) => {

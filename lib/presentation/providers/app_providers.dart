@@ -6,6 +6,8 @@ import 'package:food_donation_app/data/datasources/mock_food_donation_data_sourc
 import 'package:food_donation_app/data/datasources/mock_ngo_data_source.dart';
 import 'package:food_donation_app/data/datasources/ngo_remote_datasource.dart';
 import 'package:food_donation_app/data/datasources/mock_delivery_run_data_source.dart';
+import 'package:food_donation_app/data/datasources/mock_restaurant_data_source.dart';
+import 'package:food_donation_app/data/datasources/restaurant_remote_datasource.dart';
 import 'package:food_donation_app/data/repositories/auth_repository_impl.dart';
 import 'package:food_donation_app/data/repositories/food_donation_repository_impl.dart';
 import 'package:food_donation_app/domain/entities/freshness_check.dart';
@@ -102,6 +104,18 @@ final ngoListProvider = FutureProvider((ref) async {
 final deliveryRunsProvider = FutureProvider((ref) async {
   final dataSource = MockDeliveryRunDataSource();
   return await dataSource.fetchDeliveryRuns();
+});
+
+final restaurantsProvider = FutureProvider((ref) async {
+  try {
+    final restaurantDataSource = RestaurantRemoteDataSource();
+    return await restaurantDataSource.getAllRestaurants();
+  } catch (e) {
+    // Fallback to mock data if backend fails
+    print('Error fetching restaurants from backend: $e');
+    final dataSource = MockRestaurantDataSource();
+    return await dataSource.fetchRestaurants();
+  }
 });
 
 final navIndexProvider = StateProvider<int>((ref) => 0);

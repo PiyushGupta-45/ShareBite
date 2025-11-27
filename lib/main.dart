@@ -44,7 +44,7 @@ extension AppTabX on AppTab {
       case AppTab.runs:
         return 'Volunteer';
       case AppTab.impact:
-        return 'Impact';
+        return 'Activity';
       case AppTab.community:
         return 'Community';
     }
@@ -55,9 +55,9 @@ extension AppTabX on AppTab {
       case AppTab.home:
         return Icons.home;
       case AppTab.runs:
-        return Icons.local_shipping;
+        return Icons.restaurant;
       case AppTab.impact:
-        return Icons.emoji_events;
+        return Icons.history;
       case AppTab.community:
         return Icons.people;
     }

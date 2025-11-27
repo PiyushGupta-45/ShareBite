@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:food_donation_app/core/theme/app_theme.dart';
 import 'package:food_donation_app/presentation/providers/app_providers.dart';
+import 'package:food_donation_app/presentation/screens/ride_details_screen.dart';
 import 'package:food_donation_app/presentation/widgets/app_card.dart';
+import 'package:food_donation_app/presentation/widgets/primary_button.dart';
 
 class ImpactScreen extends ConsumerWidget {
   const ImpactScreen({super.key});
@@ -10,6 +12,8 @@ class ImpactScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final stats = ref.watch(gamificationStatsProvider);
+    final authState = ref.watch(authProvider);
+    final user = authState.user;
 
     return RefreshIndicator(
       onRefresh: () async {
@@ -22,15 +26,37 @@ class ImpactScreen extends ConsumerWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const SizedBox(height: 16),
+              // User Info Card
+              if (user != null) _UserInfoCard(user: user),
+              const SizedBox(height: 16),
               // Hero Stats Card
               _HeroStatsCard(stats: data),
+              const SizedBox(height: 24),
+              // Ride Details Button
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: PrimaryButton(
+                  label: 'Ride Details',
+                  icon: Icons.directions_car,
+                  onPressed: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (context) => const RideDetailsScreen(),
+                      ),
+                    );
+                  },
+                ),
+              ),
               const SizedBox(height: 24),
               // Badges
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 child: Text(
                   'Badges',
-                  style: Theme.of(context).textTheme.titleLarge,
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: AppTheme.primaryColor,
+                      ),
                 ),
               ),
               const SizedBox(height: 12),
@@ -41,24 +67,14 @@ class ImpactScreen extends ConsumerWidget {
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 child: Text(
                   'Leaderboard',
-                  style: Theme.of(context).textTheme.titleLarge,
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: AppTheme.primaryColor,
+                      ),
                 ),
               ),
               const SizedBox(height: 12),
               _LeaderboardSection(leaderboard: data.leaderboard),
-              const SizedBox(height: 24),
-              // Impact Trends (hidden behind button)
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: OutlinedButton.icon(
-                  onPressed: () {
-                    // Show trends dialog or navigate
-                    _showTrendsDialog(context, data);
-                  },
-                  icon: const Icon(Icons.trending_up),
-                  label: const Text('View Trends'),
-                ),
-              ),
               const SizedBox(height: 32),
             ],
           ),
@@ -74,7 +90,7 @@ class ImpactScreen extends ConsumerWidget {
               children: [
                 Icon(Icons.error_outline, size: 64, color: Colors.grey[400]),
                 const SizedBox(height: 16),
-                const Text('Error loading impact data'),
+                const Text('Error loading activity data'),
                 const SizedBox(height: 8),
                 TextButton(
                   onPressed: () => ref.invalidate(gamificationStatsProvider),
@@ -87,29 +103,56 @@ class ImpactScreen extends ConsumerWidget {
       ),
     );
   }
+}
 
-  void _showTrendsDialog(BuildContext context, dynamic stats) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Impact Trends'),
-        content: SizedBox(
-          width: double.maxFinite,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Text('Charts and trends would be displayed here.'),
-              const SizedBox(height: 16),
-              Text('CO₂ Saved: ${stats.co2SavedKg.toStringAsFixed(1)} kg'),
-              Text('Meals Served: ${stats.mealsServed}'),
-              Text('Active Streak: ${stats.activeStreakDays} days'),
-            ],
+class _UserInfoCard extends StatelessWidget {
+  const _UserInfoCard({required this.user});
+
+  final dynamic user;
+
+  @override
+  Widget build(BuildContext context) {
+    return AppCard(
+      margin: const EdgeInsets.symmetric(horizontal: 16),
+      child: Row(
+        children: [
+          CircleAvatar(
+            radius: 30,
+            backgroundColor: AppTheme.primaryColor,
+            backgroundImage: user.picture != null && user.picture!.isNotEmpty
+                ? NetworkImage(user.picture!)
+                : null,
+            child: user.picture == null || user.picture!.isEmpty
+                ? Text(
+                    user.name[0].toUpperCase(),
+                    style: const TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  )
+                : null,
           ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Close'),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  user.name,
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  user.email,
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: Colors.grey[600],
+                      ),
+                ),
+              ],
+            ),
           ),
         ],
       ),

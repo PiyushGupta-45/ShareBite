@@ -162,12 +162,16 @@ class ProfileScreen extends ConsumerWidget {
                       title: const Text('Add Restaurant'),
                       subtitle: const Text('Add a new restaurant partner'),
                       trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-                      onTap: () {
-                        Navigator.of(context).push(
+                      onTap: () async {
+                        final result = await Navigator.of(context).push(
                           MaterialPageRoute(
                             builder: (context) => const AddRestaurantScreen(),
                           ),
                         );
+                        // Refresh restaurant list if restaurant was added successfully
+                        if (result == true) {
+                          ref.invalidate(restaurantsProvider);
+                        }
                       },
                     ),
                   ],
