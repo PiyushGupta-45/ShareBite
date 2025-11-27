@@ -9,7 +9,7 @@ import 'package:food_donation_app/presentation/screens/ngo_home_screen.dart';
 import 'package:food_donation_app/presentation/screens/profile_screen.dart';
 import 'package:food_donation_app/presentation/screens/runs_screen.dart';
 import 'package:food_donation_app/presentation/screens/ngo_needs_screen.dart';
-import 'package:food_donation_app/presentation/screens/create_demand_screen.dart';
+import 'package:food_donation_app/presentation/screens/ngo_demands_list_screen.dart';
 
 void main() {
   runApp(const ProviderScope(child: FoodDonationApp()));
@@ -88,7 +88,7 @@ class HomeShell extends ConsumerWidget {
       AppTab.runs => userRole == 'restaurant'
           ? const NgoNeedsScreen()
           : userRole == 'ngo_admin'
-              ? const CreateDemandScreen()
+              ? const NgoDemandsListScreen()
               : const RunsScreen(),
       AppTab.impact => const ImpactScreen(),
       AppTab.community => const CommunityHubScreen(),

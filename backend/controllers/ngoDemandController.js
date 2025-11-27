@@ -269,3 +269,121 @@ export const ignoreDemand = async (req, res) => {
   }
 };
 
+// Update demand (NGO Admin only)
+export const updateDemand = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { amount, unit, requiredBy, description } = req.body;
+
+    // Check if user is NGO admin
+    if (req.user.role !== 'ngo_admin') {
+      return res.status(403).json({
+        success: false,
+        message: 'Only NGO admins can update demands',
+      });
+    }
+
+    const demand = await NGODemand.findById(id);
+    if (!demand) {
+      return res.status(404).json({
+        success: false,
+        message: 'Demand not found',
+      });
+    }
+
+    // Can't update if already accepted
+    if (demand.status === 'accepted') {
+      return res.status(400).json({
+        success: false,
+        message: 'Cannot update an accepted demand',
+      });
+    }
+
+    // Update fields
+    if (amount !== undefined) demand.amount = parseInt(amount);
+    if (unit !== undefined) demand.unit = unit;
+    if (requiredBy !== undefined) {
+      const requiredByDate = new Date(requiredBy);
+      if (isNaN(requiredByDate.getTime()) || requiredByDate < new Date()) {
+        return res.status(400).json({
+          success: false,
+          message: 'Required by date must be a valid future date',
+        });
+      }
+      demand.requiredBy = requiredByDate;
+    }
+    if (description !== undefined) demand.description = description || '';
+
+    await demand.save();
+
+    res.status(200).json({
+      success: true,
+      message: 'Demand updated successfully',
+      data: {
+        demand: {
+          id: demand._id,
+          ngoId: demand.ngoId,
+          ngoName: demand.ngoName,
+          amount: demand.amount,
+          unit: demand.unit,
+          requiredBy: demand.requiredBy,
+          description: demand.description,
+          status: demand.status,
+        },
+      },
+    });
+  } catch (error) {
+    console.error('Update Demand Error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to update demand',
+      error: error.message,
+    });
+  }
+};
+
+// Delete demand (NGO Admin only)
+export const deleteDemand = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // Check if user is NGO admin
+    if (req.user.role !== 'ngo_admin') {
+      return res.status(403).json({
+        success: false,
+        message: 'Only NGO admins can delete demands',
+      });
+    }
+
+    const demand = await NGODemand.findById(id);
+    if (!demand) {
+      return res.status(404).json({
+        success: false,
+        message: 'Demand not found',
+      });
+    }
+
+    // Can't delete if already accepted
+    if (demand.status === 'accepted') {
+      return res.status(400).json({
+        success: false,
+        message: 'Cannot delete an accepted demand',
+      });
+    }
+
+    await NGODemand.findByIdAndDelete(id);
+
+    res.status(200).json({
+      success: true,
+      message: 'Demand deleted successfully',
+    });
+  } catch (error) {
+    console.error('Delete Demand Error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to delete demand',
+      error: error.message,
+    });
+  }
+};
+

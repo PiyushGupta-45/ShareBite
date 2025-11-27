@@ -5,6 +5,8 @@ import {
   getDemandsByNGO,
   acceptDemand,
   ignoreDemand,
+  updateDemand,
+  deleteDemand,
 } from '../controllers/ngoDemandController.js';
 import { protect } from '../middleware/auth.js';
 
@@ -27,6 +29,12 @@ router.post('/:id/accept', acceptDemand);
 
 // Ignore demand (Restaurant only)
 router.post('/:id/ignore', ignoreDemand);
+
+// Update demand (NGO Admin only)
+router.put('/:id', updateDemand);
+
+// Delete demand (NGO Admin only)
+router.delete('/:id', deleteDemand);
 
 export default router;
 

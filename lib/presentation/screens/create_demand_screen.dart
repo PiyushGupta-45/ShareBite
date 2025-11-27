@@ -6,10 +6,13 @@ import 'package:food_donation_app/presentation/providers/app_providers.dart';
 import 'package:food_donation_app/presentation/widgets/app_card.dart';
 import 'package:food_donation_app/presentation/widgets/primary_button.dart';
 import 'package:food_donation_app/presentation/widgets/secondary_button.dart';
+import 'package:food_donation_app/domain/entities/ngo_demand.dart';
 import 'package:intl/intl.dart';
 
 class CreateDemandScreen extends ConsumerStatefulWidget {
-  const CreateDemandScreen({super.key});
+  const CreateDemandScreen({super.key, this.demand});
+
+  final NGODemand? demand; // If provided, we're editing
 
   @override
   ConsumerState<CreateDemandScreen> createState() => _CreateDemandScreenState();
@@ -24,6 +27,21 @@ class _CreateDemandScreenState extends ConsumerState<CreateDemandScreen> {
   TimeOfDay? _selectedTime;
   String? _selectedNgoId;
   bool _isLoading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // Pre-fill form if editing
+    if (widget.demand != null) {
+      final demand = widget.demand!;
+      _amountController.text = demand.amount.toString();
+      _selectedUnit = demand.unit;
+      _selectedDate = demand.requiredBy;
+      _selectedTime = TimeOfDay.fromDateTime(demand.requiredBy);
+      _descriptionController.text = demand.description ?? '';
+      _selectedNgoId = demand.ngoId;
+    }
+  }
 
   @override
   void dispose() {
@@ -74,7 +92,7 @@ class _CreateDemandScreenState extends ConsumerState<CreateDemandScreen> {
       return;
     }
 
-    if (_selectedNgoId == null) {
+    if (widget.demand == null && _selectedNgoId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Please select an NGO'),
@@ -106,26 +124,56 @@ class _CreateDemandScreenState extends ConsumerState<CreateDemandScreen> {
       );
 
       final dataSource = NgoDemandRemoteDataSource();
-      await dataSource.createDemand(
-        token: token,
-        ngoId: _selectedNgoId!,
-        amount: int.parse(_amountController.text.trim()),
-        unit: _selectedUnit,
-        requiredBy: requiredBy,
-        description: _descriptionController.text.trim().isNotEmpty
-            ? _descriptionController.text.trim()
-            : null,
-      );
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Demand created successfully!'),
-            backgroundColor: Colors.green,
-          ),
+      
+      if (widget.demand != null) {
+        // Update existing demand
+        await dataSource.updateDemand(
+          token: token,
+          demandId: widget.demand!.id,
+          amount: int.parse(_amountController.text.trim()),
+          unit: _selectedUnit,
+          requiredBy: requiredBy,
+          description: _descriptionController.text.trim().isNotEmpty
+              ? _descriptionController.text.trim()
+              : null,
         );
-        // Pop the screen and return success
-        Navigator.of(context).pop(true);
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Demand updated successfully!'),
+              backgroundColor: Colors.green,
+            ),
+          );
+          Navigator.of(context).pop(true);
+        }
+      } else {
+        // Create new demand
+        final ngoId = _selectedNgoId ?? widget.demand?.ngoId;
+        if (ngoId == null) {
+          throw Exception('NGO ID is required');
+        }
+        
+        await dataSource.createDemand(
+          token: token,
+          ngoId: ngoId,
+          amount: int.parse(_amountController.text.trim()),
+          unit: _selectedUnit,
+          requiredBy: requiredBy,
+          description: _descriptionController.text.trim().isNotEmpty
+              ? _descriptionController.text.trim()
+              : null,
+        );
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Demand created successfully!'),
+              backgroundColor: Colors.green,
+            ),
+          );
+          Navigator.of(context).pop(true);
+        }
       }
     } catch (e) {
       if (mounted) {
@@ -152,7 +200,7 @@ class _CreateDemandScreenState extends ConsumerState<CreateDemandScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Create Demand'),
+        title: Text(widget.demand != null ? 'Edit Demand' : 'Create Demand'),
         elevation: 0,
       ),
       body: SingleChildScrollView(
@@ -174,7 +222,7 @@ class _CreateDemandScreenState extends ConsumerState<CreateDemandScreen> {
                           ),
                     ),
                     const SizedBox(height: 16),
-                    // NGO Selection
+                    // NGO Selection (disabled if editing)
                     ngoList.when(
                       data: (ngos) {
                         if (ngos.isEmpty) {
@@ -192,11 +240,13 @@ class _CreateDemandScreenState extends ConsumerState<CreateDemandScreen> {
                               child: Text(ngo.name),
                             );
                           }).toList(),
-                          onChanged: (value) {
-                            setState(() {
-                              _selectedNgoId = value;
-                            });
-                          },
+                          onChanged: widget.demand != null
+                              ? null // Disable if editing
+                              : (value) {
+                                  setState(() {
+                                    _selectedNgoId = value;
+                                  });
+                                },
                           validator: (value) {
                             if (value == null || value.isEmpty) {
                               return 'Please select an NGO';
@@ -323,7 +373,9 @@ class _CreateDemandScreenState extends ConsumerState<CreateDemandScreen> {
               ),
               const SizedBox(height: 24),
               PrimaryButton(
-                label: _isLoading ? 'Creating...' : 'Create Demand',
+                label: _isLoading
+                    ? (widget.demand != null ? 'Updating...' : 'Creating...')
+                    : (widget.demand != null ? 'Update Demand' : 'Create Demand'),
                 onPressed: _isLoading ? null : () => _submitForm(ref),
               ),
               const SizedBox(height: 12),

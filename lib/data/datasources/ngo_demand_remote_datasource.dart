@@ -142,5 +142,65 @@ class NgoDemandRemoteDataSource {
       throw Exception('Failed to ignore demand: ${e.toString()}');
     }
   }
+
+  Future<NGODemand> updateDemand({
+    required String token,
+    required String demandId,
+    int? amount,
+    String? unit,
+    DateTime? requiredBy,
+    String? description,
+  }) async {
+    try {
+      final body = <String, dynamic>{};
+      if (amount != null) body['amount'] = amount;
+      if (unit != null) body['unit'] = unit;
+      if (requiredBy != null) body['requiredBy'] = requiredBy.toIso8601String();
+      if (description != null) body['description'] = description;
+
+      final response = await _client
+          .put(
+            Uri.parse('${ApiConstants.baseUrl}/ngo-demands/$demandId'),
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': 'Bearer $token',
+            },
+            body: jsonEncode(body),
+          )
+          .timeout(_timeoutDuration);
+
+      final data = jsonDecode(response.body) as Map<String, dynamic>;
+
+      if (response.statusCode == 200 && data['success'] == true) {
+        return NGODemand.fromJson(data['data']['demand'] as Map<String, dynamic>);
+      } else {
+        throw Exception(data['message'] as String? ?? 'Failed to update demand');
+      }
+    } catch (e) {
+      throw Exception('Failed to update demand: ${e.toString()}');
+    }
+  }
+
+  Future<void> deleteDemand(String token, String demandId) async {
+    try {
+      final response = await _client
+          .delete(
+            Uri.parse('${ApiConstants.baseUrl}/ngo-demands/$demandId'),
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': 'Bearer $token',
+            },
+          )
+          .timeout(_timeoutDuration);
+
+      final data = jsonDecode(response.body) as Map<String, dynamic>;
+
+      if (response.statusCode != 200 || data['success'] != true) {
+        throw Exception(data['message'] as String? ?? 'Failed to delete demand');
+      }
+    } catch (e) {
+      throw Exception('Failed to delete demand: ${e.toString()}');
+    }
+  }
 }
 
