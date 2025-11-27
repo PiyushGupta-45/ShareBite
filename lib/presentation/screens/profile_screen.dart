@@ -141,7 +141,7 @@ class ProfileScreen extends ConsumerWidget {
                           ),
                         );
                         // Refresh NGO list if NGO was added successfully
-                        if (result == true && mounted) {
+                        if (result == true) {
                           ref.invalidate(ngoListProvider);
                         }
                       },
