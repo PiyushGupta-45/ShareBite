@@ -79,12 +79,13 @@ class NgoNeedsScreen extends ConsumerWidget {
                             if (context.mounted) {
                               ScaffoldMessenger.of(context).showSnackBar(
                                 const SnackBar(
-                                  content: Text('Demand accepted successfully!'),
+                                  content: Text('Demand accepted! It will now appear in volunteer section.'),
                                   backgroundColor: Colors.green,
                                 ),
                               );
                             }
                             ref.invalidate(ngoDemandsProvider);
+                            ref.invalidate(acceptedNgoDemandsProvider);
                           } catch (e) {
                             if (context.mounted) {
                               ScaffoldMessenger.of(context).showSnackBar(

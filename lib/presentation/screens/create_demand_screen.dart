@@ -124,6 +124,7 @@ class _CreateDemandScreenState extends ConsumerState<CreateDemandScreen> {
             backgroundColor: Colors.green,
           ),
         );
+        // Pop the screen and return success
         Navigator.of(context).pop(true);
       }
     } catch (e) {

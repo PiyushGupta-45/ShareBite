@@ -10,7 +10,9 @@ import 'package:food_donation_app/data/datasources/mock_delivery_run_data_source
 import 'package:food_donation_app/data/datasources/mock_restaurant_data_source.dart';
 import 'package:food_donation_app/data/datasources/restaurant_remote_datasource.dart';
 import 'package:food_donation_app/data/datasources/delivery_run_remote_datasource.dart';
+import 'package:food_donation_app/data/datasources/ngo_demand_remote_datasource.dart';
 import 'package:food_donation_app/data/repositories/auth_repository_impl.dart';
+import 'package:food_donation_app/domain/entities/ngo_demand.dart';
 import 'package:food_donation_app/data/repositories/food_donation_repository_impl.dart';
 import 'package:food_donation_app/domain/entities/delivery_run.dart';
 import 'package:food_donation_app/domain/entities/freshness_check.dart';
@@ -230,6 +232,26 @@ final acceptedRequestsProvider = StateNotifierProvider<AcceptedRequestsNotifier,
   (ref) => AcceptedRequestsNotifier(),
 );
 
+// Provider for accepted NGO demands (for volunteers)
+final acceptedNgoDemandsProvider = FutureProvider<List<NGODemand>>((ref) async {
+  try {
+    final authState = ref.watch(authProvider);
+    final token = authState.token;
+
+    if (token == null) {
+      return <NGODemand>[];
+    }
+
+    final dataSource = NgoDemandRemoteDataSource();
+    final allDemands = await dataSource.getAllDemands(token);
+    // Filter only accepted demands
+    return allDemands.where((demand) => demand.status == 'accepted').toList();
+  } catch (e) {
+    print('Error fetching accepted NGO demands: $e');
+    return <NGODemand>[];
+  }
+});
+
 // Auth providers
 final authRemoteDataSourceProvider = Provider((ref) => AuthRemoteDataSource());
 
@@ -283,6 +305,24 @@ class AuthNotifier extends StateNotifier<AuthState> {
     try {
       final token = await _authRepository.getStoredToken();
       if (token != null) {
+        // First try to get fresh data from API
+        try {
+          final freshUser = await _authRepository.getCurrentUserFromApi(token);
+          if (freshUser != null) {
+            state = state.copyWith(
+              user: freshUser,
+              token: token,
+              isAuthenticated: true,
+              isLoading: false,
+            );
+            return;
+          }
+        } catch (e) {
+          // If API fails, fall back to stored user
+          print('Failed to fetch fresh user data: $e');
+        }
+        
+        // Fallback to stored user if API fails
         final user = await _authRepository.getStoredUser();
         if (user != null) {
           state = state.copyWith(
@@ -384,6 +424,29 @@ class AuthNotifier extends StateNotifier<AuthState> {
     // Clear local storage
     await _authRepository.signOut();
     state = const AuthState();
+  }
+
+  Future<void> refreshUser() async {
+    final token = state.token;
+    if (token == null) return;
+
+    try {
+      state = state.copyWith(isLoading: true);
+      final user = await _authRepository.getCurrentUserFromApi(token);
+      if (user != null) {
+        state = state.copyWith(
+          user: user,
+          isLoading: false,
+        );
+      } else {
+        state = state.copyWith(isLoading: false);
+      }
+    } catch (e) {
+      state = state.copyWith(
+        isLoading: false,
+        error: 'Failed to refresh user data',
+      );
+    }
   }
 }
 

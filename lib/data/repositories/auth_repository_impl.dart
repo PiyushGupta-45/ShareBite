@@ -107,6 +107,19 @@ class AuthRepositoryImpl {
     await prefs.remove(_userKey);
   }
 
+  Future<User?> getCurrentUserFromApi(String token) async {
+    try {
+      final user = await _remoteDataSource.getCurrentUser(token);
+      if (user != null) {
+        // Update stored user data with fresh data from API
+        await _saveAuthData(token, user);
+      }
+      return user;
+    } catch (e) {
+      return null;
+    }
+  }
+
   Future<void> _saveAuthData(String token, User user) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_tokenKey, token);

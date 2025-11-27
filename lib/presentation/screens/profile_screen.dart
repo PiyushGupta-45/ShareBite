@@ -24,6 +24,31 @@ class ProfileScreen extends ConsumerWidget {
     }
 
     final isAdmin = user.isAdmin;
+    final isRestaurant = user.isRestaurant;
+    final isNgoAdmin = user.isNgoAdmin;
+
+    // Get role label and icon
+    String roleLabel;
+    IconData roleIcon;
+    Color roleColor;
+
+    if (isAdmin) {
+      roleLabel = 'Admin';
+      roleIcon = Icons.admin_panel_settings;
+      roleColor = AppTheme.accentColor;
+    } else if (isRestaurant) {
+      roleLabel = 'Restaurant';
+      roleIcon = Icons.restaurant;
+      roleColor = AppTheme.primaryColor;
+    } else if (isNgoAdmin) {
+      roleLabel = 'NGO Admin';
+      roleIcon = Icons.business;
+      roleColor = AppTheme.primaryColor;
+    } else {
+      roleLabel = 'Volunteer';
+      roleIcon = Icons.person;
+      roleColor = AppTheme.primaryColor;
+    }
 
     return Scaffold(
       appBar: AppBar(
@@ -72,10 +97,10 @@ class ProfileScreen extends ConsumerWidget {
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
                     decoration: BoxDecoration(
-                      color: isAdmin ? AppTheme.accentColor.withOpacity(0.1) : AppTheme.primaryColor.withOpacity(0.1),
+                      color: roleColor.withOpacity(0.1),
                       borderRadius: BorderRadius.circular(20),
                       border: Border.all(
-                        color: isAdmin ? AppTheme.accentColor : AppTheme.primaryColor,
+                        color: roleColor,
                         width: 1.5,
                       ),
                     ),
@@ -83,15 +108,15 @@ class ProfileScreen extends ConsumerWidget {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Icon(
-                          isAdmin ? Icons.admin_panel_settings : Icons.person,
+                          roleIcon,
                           size: 16,
-                          color: isAdmin ? AppTheme.accentColor : AppTheme.primaryColor,
+                          color: roleColor,
                         ),
                         const SizedBox(width: 6),
                         Text(
-                          isAdmin ? 'Admin' : 'Volunteer',
+                          roleLabel,
                           style: TextStyle(
-                            color: isAdmin ? AppTheme.accentColor : AppTheme.primaryColor,
+                            color: roleColor,
                             fontWeight: FontWeight.bold,
                             fontSize: 14,
                           ),
@@ -215,6 +240,40 @@ class ProfileScreen extends ConsumerWidget {
               ),
             ),
             const SizedBox(height: 24),
+            // Refresh User Data Button
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: OutlinedButton.icon(
+                onPressed: () async {
+                  try {
+                    await ref.read(authProvider.notifier).refreshUser();
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('User data refreshed'),
+                          backgroundColor: Colors.green,
+                        ),
+                      );
+                    }
+                  } catch (e) {
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('Failed to refresh: ${e.toString()}'),
+                          backgroundColor: Colors.red,
+                        ),
+                      );
+                    }
+                  }
+                },
+                icon: const Icon(Icons.refresh),
+                label: const Text('Refresh User Data'),
+                style: OutlinedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
             // Sign Out Button
             Padding(
               padding: const EdgeInsets.all(16),

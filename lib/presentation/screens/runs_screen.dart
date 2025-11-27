@@ -2,10 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:food_donation_app/core/theme/app_theme.dart';
 import 'package:food_donation_app/domain/entities/restaurant.dart';
+import 'package:food_donation_app/domain/entities/ngo_demand.dart';
 import 'package:food_donation_app/presentation/providers/app_providers.dart';
 import 'package:food_donation_app/presentation/screens/accept_delivery_screen.dart';
+import 'package:food_donation_app/presentation/screens/accept_ngo_demand_screen.dart';
 import 'package:food_donation_app/presentation/widgets/app_card.dart';
 import 'package:food_donation_app/presentation/widgets/primary_button.dart';
+import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 enum RestaurantFilter {
@@ -29,6 +32,7 @@ class _RunsScreenState extends ConsumerState<RunsScreen> {
   @override
   Widget build(BuildContext context) {
     final restaurants = ref.watch(restaurantsProvider);
+    final acceptedDemands = ref.watch(acceptedNgoDemandsProvider);
 
     return Column(
       children: [
@@ -56,18 +60,55 @@ class _RunsScreenState extends ConsumerState<RunsScreen> {
                   _FilterChip(
                     label: '<5 km',
                     isSelected: _selectedFilter == RestaurantFilter.nearby,
-                    onTap: () => setState(() => _selectedFilter = RestaurantFilter.nearby),
+                    onTap: () => setState(() => _selectedFilter == RestaurantFilter.nearby),
                   ),
                 ],
               ),
             ],
           ),
         ),
+        // Accepted NGO Demands Section
+        acceptedDemands.when(
+          data: (demands) {
+            if (demands.isNotEmpty) {
+              return Container(
+                height: 200,
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Accepted NGO Demands',
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.bold,
+                            color: AppTheme.primaryColor,
+                          ),
+                    ),
+                    const SizedBox(height: 8),
+                    Expanded(
+                      child: ListView.builder(
+                        scrollDirection: Axis.horizontal,
+                        itemCount: demands.length,
+                        itemBuilder: (context, index) {
+                          return _AcceptedDemandCard(demand: demands[index]);
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }
+            return const SizedBox.shrink();
+          },
+          loading: () => const SizedBox.shrink(),
+          error: (_, __) => const SizedBox.shrink(),
+        ),
         // Restaurants list
         Expanded(
           child: RefreshIndicator(
             onRefresh: () async {
               ref.invalidate(restaurantsProvider);
+              ref.invalidate(acceptedNgoDemandsProvider);
             },
             child: restaurants.when(
               data: (items) {
@@ -163,6 +204,94 @@ class _FilterChip extends StatelessWidget {
       onSelected: (_) => onTap(),
       selectedColor: AppTheme.primaryColor.withOpacity(0.2),
       checkmarkColor: AppTheme.primaryColor,
+    );
+  }
+}
+
+class _AcceptedDemandCard extends StatelessWidget {
+  const _AcceptedDemandCard({
+    required this.demand,
+  });
+
+  final NGODemand demand;
+
+  @override
+  Widget build(BuildContext context) {
+    final formattedDate = DateFormat('dd/MM/yyyy').format(demand.requiredBy);
+    final formattedTime = DateFormat('HH:mm').format(demand.requiredBy);
+
+    return Container(
+      width: 280,
+      margin: const EdgeInsets.only(right: 12),
+      child: AppCard(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.business, color: AppTheme.primaryColor, size: 20),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    demand.ngoName,
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(
+              demand.formattedAmount,
+              style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
+            ),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Icon(Icons.calendar_today, size: 14, color: Colors.grey[600]),
+                const SizedBox(width: 4),
+                Text(
+                  formattedDate,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: Colors.grey[600],
+                      ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 4),
+            Row(
+              children: [
+                Icon(Icons.access_time, size: 14, color: Colors.grey[600]),
+                const SizedBox(width: 4),
+                Text(
+                  formattedTime,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: Colors.grey[600],
+                      ),
+                ),
+              ],
+            ),
+            const Spacer(),
+            const SizedBox(height: 12),
+            PrimaryButton(
+              label: 'View Details',
+              icon: Icons.arrow_forward,
+              onPressed: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (context) => AcceptNgoDemandScreen(demand: demand),
+                  ),
+                );
+              },
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
