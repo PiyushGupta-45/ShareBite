@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- 
+    ============================================
+    GOOGLE SIGN-IN CONFIGURATION
+    ============================================
+    
+    STEP 1: Get your Google OAuth Web Client ID from:
+    https://console.cloud.google.com/apis/credentials
+    
+    STEP 2: Replace "PASTE_YOUR_WEB_CLIENT_ID_HERE" below with your actual Web Client ID
+    Example: 123456789-abcdefghijk.apps.googleusercontent.com
+    
+    IMPORTANT:
+    - Use the WEB CLIENT ID (not Android Client ID)
+    - This is used to get the ID token that's sent to your backend
+    - Make sure there are no quotes or extra spaces
+    - After updating, rebuild the app: flutter clean && flutter run
+    -->
+    <string name="default_web_client_id">999767491672-9tolrslbri5c7ihv40sjj6sq0qlruki2.apps.googleusercontent.com</string>
+</resources>
+
