@@ -11,6 +11,7 @@ import 'package:food_donation_app/data/datasources/restaurant_remote_datasource.
 import 'package:food_donation_app/data/datasources/delivery_run_remote_datasource.dart';
 import 'package:food_donation_app/data/repositories/auth_repository_impl.dart';
 import 'package:food_donation_app/data/repositories/food_donation_repository_impl.dart';
+import 'package:food_donation_app/domain/entities/delivery_run.dart';
 import 'package:food_donation_app/domain/entities/freshness_check.dart';
 import 'package:food_donation_app/domain/entities/user.dart';
 import 'package:food_donation_app/domain/repositories/food_donation_repository.dart';
@@ -26,8 +27,7 @@ import 'package:food_donation_app/domain/usecases/get_volunteer_requests.dart';
 
 final mockDataSourceProvider = Provider((ref) => MockFoodDonationDataSource());
 
-final foodDonationRepositoryProvider =
-    Provider<FoodDonationRepository>((ref) {
+final foodDonationRepositoryProvider = Provider<FoodDonationRepository>((ref) {
   return FoodDonationRepositoryImpl(ref.watch(mockDataSourceProvider));
 });
 
@@ -111,7 +111,7 @@ final userDeliveryRunsProvider = FutureProvider((ref) async {
   try {
     final authState = ref.watch(authProvider);
     final token = authState.token;
-    
+
     if (token == null) {
       return <DeliveryRun>[];
     }
@@ -142,14 +142,16 @@ class ChecklistNotifier extends StateNotifier<Map<String, bool>> {
   ChecklistNotifier() : super(const {});
 
   void toggle(FreshnessCheck item, bool value) {
-    state = {...state, item.label: value};
+    state = {
+      ...state,
+      item.label: value
+    };
   }
 
   bool isChecked(FreshnessCheck item) => state[item.label] ?? item.completed;
 }
 
-final checklistStateProvider =
-    StateNotifierProvider<ChecklistNotifier, Map<String, bool>>(
+final checklistStateProvider = StateNotifierProvider<ChecklistNotifier, Map<String, bool>>(
   (ref) => ChecklistNotifier(),
 );
 
@@ -200,8 +202,7 @@ class HandshakeNotifier extends StateNotifier<HandshakeState> {
   }
 }
 
-final handshakeProvider =
-    StateNotifierProvider<HandshakeNotifier, HandshakeState>(
+final handshakeProvider = StateNotifierProvider<HandshakeNotifier, HandshakeState>(
   (ref) => HandshakeNotifier(),
 );
 
@@ -212,15 +213,19 @@ class AcceptedRequestsNotifier extends StateNotifier<Set<String>> {
 
   void toggle(String id) {
     if (state.contains(id)) {
-      state = {...state}..remove(id);
+      state = {
+        ...state
+      }..remove(id);
     } else {
-      state = {...state, id};
+      state = {
+        ...state,
+        id
+      };
     }
   }
 }
 
-final acceptedRequestsProvider =
-    StateNotifierProvider<AcceptedRequestsNotifier, Set<String>>(
+final acceptedRequestsProvider = StateNotifierProvider<AcceptedRequestsNotifier, Set<String>>(
   (ref) => AcceptedRequestsNotifier(),
 );
 
@@ -374,4 +379,3 @@ class AuthNotifier extends StateNotifier<AuthState> {
 final authProvider = StateNotifierProvider<AuthNotifier, AuthState>((ref) {
   return AuthNotifier(ref.watch(authRepositoryProvider));
 });
-

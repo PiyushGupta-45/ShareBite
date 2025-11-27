@@ -113,6 +113,9 @@ class _RunsScreenState extends ConsumerState<RunsScreen> {
                       restaurant: sorted[index],
                       userLat: userLatitude,
                       userLon: userLongitude,
+                      onDeliveryAccepted: () {
+                        ref.invalidate(restaurantsProvider);
+                      },
                     );
                   },
                 );
@@ -169,11 +172,13 @@ class _RestaurantCard extends StatelessWidget {
     required this.restaurant,
     required this.userLat,
     required this.userLon,
+    required this.onDeliveryAccepted,
   });
 
   final Restaurant restaurant;
   final double userLat;
   final double userLon;
+  final VoidCallback onDeliveryAccepted;
 
   Future<void> _openGoogleMaps() async {
     final url = Uri.parse(
@@ -310,19 +315,16 @@ class _RestaurantCard extends StatelessWidget {
                 child: PrimaryButton(
                   label: 'Accept',
                   icon: Icons.check_circle,
-                  onPressed: () {
-                    Navigator.of(context)
-                        .push(
+                  onPressed: () async {
+                    final result = await Navigator.of(context).push(
                       MaterialPageRoute(
                         builder: (context) => AcceptDeliveryScreen(restaurant: restaurant),
                       ),
-                    )
-                        .then((result) {
-                      // Refresh restaurant list if delivery was accepted
-                      if (result == true) {
-                        ref.invalidate(restaurantsProvider);
-                      }
-                    });
+                    );
+                    // Refresh restaurant list if delivery was accepted
+                    if (result == true) {
+                      onDeliveryAccepted();
+                    }
                   },
                 ),
               ),
