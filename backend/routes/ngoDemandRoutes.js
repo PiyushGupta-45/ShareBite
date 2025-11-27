@@ -7,6 +7,7 @@ import {
   ignoreDemand,
   updateDemand,
   deleteDemand,
+  getAcceptedDemandsForVolunteers,
 } from '../controllers/ngoDemandController.js';
 import { protect } from '../middleware/auth.js';
 
@@ -17,6 +18,9 @@ router.use(protect);
 
 // Get all demands (for restaurant users)
 router.get('/', getAllDemands);
+
+// Get accepted demands for volunteers (with restaurant info)
+router.get('/accepted-for-volunteers', getAcceptedDemandsForVolunteers);
 
 // Get demands by NGO (for NGO admin)
 router.get('/ngo/:ngoId', getDemandsByNGO);

@@ -202,5 +202,32 @@ class NgoDemandRemoteDataSource {
       throw Exception('Failed to delete demand: ${e.toString()}');
     }
   }
+
+  Future<List<NGODemand>> getAcceptedDemandsForVolunteers(String token) async {
+    try {
+      final response = await _client
+          .get(
+            Uri.parse('${ApiConstants.baseUrl}/ngo-demands/accepted-for-volunteers'),
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': 'Bearer $token',
+            },
+          )
+          .timeout(_timeoutDuration);
+
+      final data = jsonDecode(response.body) as Map<String, dynamic>;
+
+      if (response.statusCode == 200 && data['success'] == true) {
+        final demandsList = data['data']['demands'] as List<dynamic>;
+        return demandsList
+            .map((demandJson) => NGODemand.fromJson(demandJson as Map<String, dynamic>))
+            .toList();
+      } else {
+        throw Exception(data['message'] as String? ?? 'Failed to fetch accepted demands');
+      }
+    } catch (e) {
+      throw Exception('Failed to fetch accepted demands: ${e.toString()}');
+    }
+  }
 }
 

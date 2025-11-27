@@ -11,6 +11,11 @@ class NGODemand {
     this.acceptedBy,
     this.acceptedAt,
     this.createdAt,
+    this.restaurantName,
+    this.ngoLocation,
+    this.ngoAddress,
+    this.ngoLatitude,
+    this.ngoLongitude,
   });
 
   final String id;
@@ -24,6 +29,11 @@ class NGODemand {
   final String? acceptedBy;
   final DateTime? acceptedAt;
   final DateTime? createdAt;
+  final String? restaurantName; // Restaurant that accepted the demand
+  final String? ngoLocation; // NGO location
+  final String? ngoAddress; // NGO full address
+  final double? ngoLatitude; // NGO latitude
+  final double? ngoLongitude; // NGO longitude
 
   factory NGODemand.fromJson(Map<String, dynamic> json) {
     return NGODemand(
@@ -44,6 +54,11 @@ class NGODemand {
       createdAt: json['createdAt'] != null
           ? DateTime.parse(json['createdAt'] as String)
           : null,
+      restaurantName: json['restaurantName'] as String?,
+      ngoLocation: json['ngoLocation'] as String?,
+      ngoAddress: json['ngoAddress'] as String?,
+      ngoLatitude: json['ngoLatitude'] != null ? (json['ngoLatitude'] as num).toDouble() : null,
+      ngoLongitude: json['ngoLongitude'] != null ? (json['ngoLongitude'] as num).toDouble() : null,
     );
   }
 
@@ -60,6 +75,11 @@ class NGODemand {
       'acceptedBy': acceptedBy,
       'acceptedAt': acceptedAt?.toIso8601String(),
       'createdAt': createdAt?.toIso8601String(),
+      'restaurantName': restaurantName,
+      'ngoLocation': ngoLocation,
+      'ngoAddress': ngoAddress,
+      'ngoLatitude': ngoLatitude,
+      'ngoLongitude': ngoLongitude,
     };
   }
 

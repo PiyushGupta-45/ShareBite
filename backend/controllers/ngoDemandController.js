@@ -120,6 +120,49 @@ export const getAllDemands = async (req, res) => {
   }
 };
 
+// Get accepted demands for volunteers (with restaurant info)
+export const getAcceptedDemandsForVolunteers = async (req, res) => {
+  try {
+    const demands = await NGODemand.find({ status: 'accepted' })
+      .sort({ requiredBy: 1, createdAt: -1 })
+      .select('-__v')
+      .populate('ngoId', 'name location address latitude longitude')
+      .populate('acceptedBy', 'name email')
+      .lean();
+
+    res.status(200).json({
+      success: true,
+      data: {
+        demands: demands.map((demand) => ({
+          id: demand._id,
+          ngoId: demand.ngoId._id || demand.ngoId,
+          ngoName: demand.ngoName,
+          ngoLocation: demand.ngoId?.location || '',
+          ngoAddress: demand.ngoId?.address || '',
+          ngoLatitude: demand.ngoId?.latitude || 0,
+          ngoLongitude: demand.ngoId?.longitude || 0,
+          restaurantName: demand.acceptedBy?.name || 'Unknown Restaurant',
+          restaurantEmail: demand.acceptedBy?.email || '',
+          amount: demand.amount,
+          unit: demand.unit,
+          requiredBy: demand.requiredBy,
+          description: demand.description,
+          status: demand.status,
+          acceptedAt: demand.acceptedAt,
+          createdAt: demand.createdAt,
+        })),
+      },
+    });
+  } catch (error) {
+    console.error('Get Accepted Demands Error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch accepted demands',
+      error: error.message,
+    });
+  }
+};
+
 // Get demands by NGO (for NGO admin)
 export const getDemandsByNGO = async (req, res) => {
   try {

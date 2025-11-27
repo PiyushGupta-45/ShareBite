@@ -5,7 +5,6 @@ import 'package:food_donation_app/domain/entities/restaurant.dart';
 import 'package:food_donation_app/domain/entities/ngo_demand.dart';
 import 'package:food_donation_app/presentation/providers/app_providers.dart';
 import 'package:food_donation_app/presentation/screens/accept_delivery_screen.dart';
-import 'package:food_donation_app/presentation/screens/accept_ngo_demand_screen.dart';
 import 'package:food_donation_app/presentation/widgets/app_card.dart';
 import 'package:food_donation_app/presentation/widgets/primary_button.dart';
 import 'package:intl/intl.dart';
@@ -32,7 +31,7 @@ class _RunsScreenState extends ConsumerState<RunsScreen> {
   @override
   Widget build(BuildContext context) {
     final restaurants = ref.watch(restaurantsProvider);
-    final acceptedDemands = ref.watch(acceptedNgoDemandsProvider);
+    final acceptedDemands = ref.watch(acceptedNgoDemandsForVolunteersProvider);
 
     return Column(
       children: [
@@ -67,30 +66,34 @@ class _RunsScreenState extends ConsumerState<RunsScreen> {
             ],
           ),
         ),
-        // Accepted NGO Demands Section
+        // Restaurant Accepted Demands Section (for volunteers)
         acceptedDemands.when(
           data: (demands) {
             if (demands.isNotEmpty) {
               return Container(
-                height: 200,
-                padding: const EdgeInsets.symmetric(horizontal: 16),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Accepted NGO Demands',
+                      'Restaurant Accepted Deliveries',
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
                             fontWeight: FontWeight.bold,
                             color: AppTheme.primaryColor,
                           ),
                     ),
                     const SizedBox(height: 8),
-                    Expanded(
+                    SizedBox(
+                      height: 180,
                       child: ListView.builder(
                         scrollDirection: Axis.horizontal,
                         itemCount: demands.length,
                         itemBuilder: (context, index) {
-                          return _AcceptedDemandCard(demand: demands[index]);
+                          return _RestaurantAcceptedDemandCard(
+                            demand: demands[index],
+                            userLat: userLatitude,
+                            userLon: userLongitude,
+                          );
                         },
                       ),
                     ),
@@ -108,7 +111,7 @@ class _RunsScreenState extends ConsumerState<RunsScreen> {
           child: RefreshIndicator(
             onRefresh: () async {
               ref.invalidate(restaurantsProvider);
-              ref.invalidate(acceptedNgoDemandsProvider);
+              ref.invalidate(acceptedNgoDemandsForVolunteersProvider);
             },
             child: restaurants.when(
               data: (items) {
@@ -208,34 +211,66 @@ class _FilterChip extends StatelessWidget {
   }
 }
 
-class _AcceptedDemandCard extends StatelessWidget {
-  const _AcceptedDemandCard({
+class _RestaurantAcceptedDemandCard extends ConsumerStatefulWidget {
+  const _RestaurantAcceptedDemandCard({
     required this.demand,
+    required this.userLat,
+    required this.userLon,
   });
 
   final NGODemand demand;
+  final double userLat;
+  final double userLon;
+
+  @override
+  ConsumerState<_RestaurantAcceptedDemandCard> createState() => _RestaurantAcceptedDemandCardState();
+}
+
+class _RestaurantAcceptedDemandCardState extends ConsumerState<_RestaurantAcceptedDemandCard> {
+  bool _isAccepted = false;
 
   @override
   Widget build(BuildContext context) {
+    final demand = widget.demand;
     final formattedDate = DateFormat('dd/MM/yyyy').format(demand.requiredBy);
     final formattedTime = DateFormat('HH:mm').format(demand.requiredBy);
 
     return Container(
-      width: 280,
+      width: 300,
       margin: const EdgeInsets.only(right: 12),
       child: AppCard(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // Restaurant Name (Top)
             Row(
               children: [
-                Icon(Icons.business, color: AppTheme.primaryColor, size: 20),
+                Icon(Icons.restaurant, color: AppTheme.primaryColor, size: 20),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    demand.restaurantName ?? 'Unknown Restaurant',
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                          fontWeight: FontWeight.bold,
+                          color: AppTheme.primaryColor,
+                        ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            // NGO Name (Below)
+            Row(
+              children: [
+                Icon(Icons.business, color: Colors.grey[600], size: 16),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
                     demand.ngoName,
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.bold,
+                          fontWeight: FontWeight.w600,
                         ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
@@ -256,20 +291,7 @@ class _AcceptedDemandCard extends StatelessWidget {
                 Icon(Icons.calendar_today, size: 14, color: Colors.grey[600]),
                 const SizedBox(width: 4),
                 Text(
-                  formattedDate,
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: Colors.grey[600],
-                      ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 4),
-            Row(
-              children: [
-                Icon(Icons.access_time, size: 14, color: Colors.grey[600]),
-                const SizedBox(width: 4),
-                Text(
-                  formattedTime,
+                  '$formattedDate at $formattedTime',
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
                         color: Colors.grey[600],
                       ),
@@ -278,17 +300,105 @@ class _AcceptedDemandCard extends StatelessWidget {
             ),
             const Spacer(),
             const SizedBox(height: 12),
-            PrimaryButton(
-              label: 'View Details',
-              icon: Icons.arrow_forward,
-              onPressed: () {
-                Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (context) => AcceptNgoDemandScreen(demand: demand),
-                  ),
-                );
-              },
-            ),
+            if (!_isAccepted)
+              PrimaryButton(
+                label: 'Accept Delivery',
+                icon: Icons.check_circle,
+                onPressed: () async {
+                  // Show NGO location after accepting
+                  if (demand.ngoLocation != null || demand.ngoAddress != null) {
+                    final location = demand.ngoAddress ?? demand.ngoLocation ?? 'Location not available';
+                    final lat = demand.ngoLatitude;
+                    final lon = demand.ngoLongitude;
+
+                    if (mounted) {
+                      showDialog(
+                        context: context,
+                        builder: (context) => AlertDialog(
+                          title: const Text('Delivery Accepted!'),
+                          content: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'NGO Location:',
+                                style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(location),
+                              if (lat != null && lon != null) ...[
+                                const SizedBox(height: 16),
+                                OutlinedButton.icon(
+                                  onPressed: () async {
+                                    final url = Uri.parse(
+                                      'https://www.google.com/maps/search/?api=1&query=$lat,$lon',
+                                    );
+                                    if (await canLaunchUrl(url)) {
+                                      await launchUrl(url, mode: LaunchMode.externalApplication);
+                                    }
+                                  },
+                                  icon: const Icon(Icons.directions, size: 16),
+                                  label: const Text('Navigate to NGO'),
+                                ),
+                              ],
+                            ],
+                          ),
+                          actions: [
+                            TextButton(
+                              onPressed: () {
+                                Navigator.of(context).pop();
+                                setState(() {
+                                  _isAccepted = true;
+                                });
+                                // Refresh the list
+                                ref.invalidate(acceptedNgoDemandsForVolunteersProvider);
+                              },
+                              child: const Text('OK'),
+                            ),
+                          ],
+                        ),
+                      );
+                    }
+                  } else {
+                    setState(() {
+                      _isAccepted = true;
+                    });
+                    if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Delivery accepted!'),
+                          backgroundColor: Colors.green,
+                        ),
+                      );
+                    }
+                    ref.invalidate(acceptedNgoDemandsForVolunteersProvider);
+                  }
+                },
+              )
+            else
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.green.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.check_circle, color: Colors.green, size: 20),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Accepted',
+                      style: TextStyle(
+                        color: Colors.green,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
           ],
         ),
       ),
