@@ -138,6 +138,11 @@ class AuthRemoteDataSource {
         },
       );
 
+      // Handle 404 or route not found
+      if (response.statusCode == 404) {
+        throw Exception('Route not found: ${ApiConstants.googleAuth}. Please check:\n1. Backend is deployed correctly on Render\n2. Route /api/auth/google exists\n3. Backend URL is correct: ${ApiConstants.baseUrl}');
+      }
+
       final data = jsonDecode(response.body) as Map<String, dynamic>;
 
       if ((response.statusCode == 200 || response.statusCode == 201) && data['success'] == true) {
@@ -147,7 +152,8 @@ class AuthRemoteDataSource {
           'user': User.fromJson(data['data']['user'] as Map<String, dynamic>),
         };
       } else {
-        throw Exception(data['message'] as String? ?? 'Google sign in failed');
+        final errorMsg = data['message'] as String? ?? 'Google sign in failed';
+        throw Exception('$errorMsg (Status: ${response.statusCode}, URL: ${ApiConstants.googleAuth})');
       }
     } on http.ClientException catch (e) {
       throw Exception('Connection failed: Unable to reach backend server. Make sure the backend is running at ${ApiConstants.googleAuth}. Error: ${e.message}');

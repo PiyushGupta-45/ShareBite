@@ -42,9 +42,7 @@ class _NgoHomeScreenState extends ConsumerState<NgoHomeScreen> {
           }
 
           // Filter by location if selected
-          final filteredNgos = selectedLocation == null
-              ? ngos
-              : ngos.where((ngo) => ngo.location == selectedLocation).toList();
+          final filteredNgos = selectedLocation == null ? ngos : ngos.where((ngo) => ngo.location == selectedLocation).toList();
 
           // Sort by distance
           final sortedNgos = List<NGO>.from(filteredNgos)
@@ -128,7 +126,7 @@ class _NgoHomeScreenState extends ConsumerState<NgoHomeScreen> {
                       crossAxisCount: 2,
                       crossAxisSpacing: 16,
                       mainAxisSpacing: 16,
-                      childAspectRatio: 0.75,
+                      childAspectRatio: 1.1, // Wider cards with slightly more height
                     ),
                     delegate: SliverChildBuilderDelegate(
                       (context, index) {
@@ -178,13 +176,48 @@ class _NgoHomeScreenState extends ConsumerState<NgoHomeScreen> {
   }
 }
 
-class _NgoCard extends StatelessWidget {
-  const _NgoCard({required this.ngo});
+class _LocationChip extends StatelessWidget {
+  const _LocationChip({
+    required this.label,
+    required this.isSelected,
+    required this.onTap,
+  });
 
-  final NGO ngo;
+  final String label;
+  final bool isSelected;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
+    return FilterChip(
+      label: Text(label),
+      selected: isSelected,
+      onSelected: (_) => onTap(),
+      selectedColor: AppTheme.primaryColor.withOpacity(0.2),
+      checkmarkColor: AppTheme.primaryColor,
+      labelStyle: TextStyle(
+        color: isSelected ? AppTheme.primaryColor : Colors.grey[700],
+        fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+      ),
+    );
+  }
+}
+
+class _NgoCard extends StatelessWidget {
+  const _NgoCard({
+    required this.ngo,
+    required this.userLat,
+    required this.userLon,
+  });
+
+  final NGO ngo;
+  final double userLat;
+  final double userLon;
+
+  @override
+  Widget build(BuildContext context) {
+    final distance = ngo.distanceFrom(userLat, userLon);
+
     return Card(
       elevation: 4,
       shape: RoundedRectangleBorder(
@@ -201,56 +234,98 @@ class _NgoCard extends StatelessWidget {
         },
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
+          mainAxisSize: MainAxisSize.min,
           children: [
             // Main Image
             Expanded(
-              flex: 3,
-              child: Container(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: [
-                      AppTheme.primaryColor.withOpacity(0.3),
-                      AppTheme.primaryColor.withOpacity(0.1),
-                    ],
+              flex: 4,
+              child: Stack(
+                children: [
+                  Container(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [
+                          AppTheme.primaryColor.withOpacity(0.3),
+                          AppTheme.primaryColor.withOpacity(0.1),
+                        ],
+                      ),
+                    ),
+                    child: Image.network(
+                      ngo.mainImage,
+                      fit: BoxFit.cover,
+                      width: double.infinity,
+                      errorBuilder: (context, error, stackTrace) {
+                        return Container(
+                          color: AppTheme.primaryColor.withOpacity(0.1),
+                          child: Icon(
+                            Icons.restaurant,
+                            size: 48,
+                            color: AppTheme.primaryColor.withOpacity(0.5),
+                          ),
+                        );
+                      },
+                      loadingBuilder: (context, child, loadingProgress) {
+                        if (loadingProgress == null) return child;
+                        return Center(
+                          child: CircularProgressIndicator(
+                            value: loadingProgress.expectedTotalBytes != null ? loadingProgress.cumulativeBytesLoaded / loadingProgress.expectedTotalBytes! : null,
+                            strokeWidth: 2,
+                          ),
+                        );
+                      },
+                    ),
                   ),
-                ),
-                child: Image.network(
-                  ngo.mainImage,
-                  fit: BoxFit.cover,
-                  errorBuilder: (context, error, stackTrace) {
-                    return Container(
-                      color: AppTheme.primaryColor.withOpacity(0.1),
-                      child: Icon(
-                        Icons.restaurant,
-                        size: 48,
-                        color: AppTheme.primaryColor.withOpacity(0.5),
+                  // Distance Badge
+                  Positioned(
+                    top: 8,
+                    right: 8,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.9),
+                        borderRadius: BorderRadius.circular(12),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.1),
+                            blurRadius: 4,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
                       ),
-                    );
-                  },
-                  loadingBuilder: (context, child, loadingProgress) {
-                    if (loadingProgress == null) return child;
-                    return Center(
-                      child: CircularProgressIndicator(
-                        value: loadingProgress.expectedTotalBytes != null
-                            ? loadingProgress.cumulativeBytesLoaded /
-                                loadingProgress.expectedTotalBytes!
-                            : null,
-                        strokeWidth: 2,
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.location_on,
+                            size: 14,
+                            color: AppTheme.primaryColor,
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            '${distance.toStringAsFixed(1)} km',
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                              color: AppTheme.primaryColor,
+                            ),
+                          ),
+                        ],
                       ),
-                    );
-                  },
-                ),
+                    ),
+                  ),
+                ],
               ),
             ),
-            // Name and Tagline
+            // Name, Location and Tagline
             Expanded(
-              flex: 2,
+              flex: 3,
               child: Padding(
-                padding: const EdgeInsets.all(12),
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Text(
@@ -258,18 +333,44 @@ class _NgoCard extends StatelessWidget {
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
                             fontWeight: FontWeight.bold,
                             color: AppTheme.primaryColor,
+                            fontSize: 15,
                           ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
-                    const SizedBox(height: 4),
-                    Text(
-                      ngo.tagline,
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: Colors.grey[600],
+                    const SizedBox(height: 6),
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.location_pin,
+                          size: 12,
+                          color: Colors.grey[600],
+                        ),
+                        const SizedBox(width: 4),
+                        Flexible(
+                          child: Text(
+                            ngo.location,
+                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                  color: Colors.grey[600],
+                                  fontSize: 11,
+                                ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                           ),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 6),
+                    Flexible(
+                      child: Text(
+                        ngo.tagline,
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: Colors.grey[600],
+                              fontSize: 12,
+                            ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ),
                   ],
                 ),
@@ -281,4 +382,3 @@ class _NgoCard extends StatelessWidget {
     );
   }
 }
-

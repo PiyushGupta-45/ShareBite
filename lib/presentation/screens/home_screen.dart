@@ -115,8 +115,7 @@ class HomeScreen extends ConsumerWidget {
                   ],
                 ),
               ),
-              if (alert.urgencyTag.contains('Urgent') ||
-                  alert.urgencyTag.contains('Flash'))
+              if (alert.urgencyTag.contains('Urgent') || alert.urgencyTag.contains('Flash'))
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
@@ -154,9 +153,7 @@ class HomeScreen extends ConsumerWidget {
                   context,
                   'Expires in',
                   _formatDuration(timeLeft),
-                  timeLeft.inMinutes < 30
-                      ? AppTheme.accentColor
-                      : AppTheme.primaryColor,
+                  timeLeft.inMinutes < 30 ? AppTheme.accentColor : AppTheme.primaryColor,
                 ),
               ],
             ),
@@ -253,4 +250,3 @@ class HomeScreen extends ConsumerWidget {
     }
   }
 }
-
