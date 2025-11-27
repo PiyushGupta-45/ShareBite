@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:food_donation_app/data/datasources/auth_remote_datasource.dart';
 import 'package:food_donation_app/data/datasources/mock_food_donation_data_source.dart';
 import 'package:food_donation_app/data/datasources/mock_ngo_data_source.dart';
+import 'package:food_donation_app/data/datasources/ngo_remote_datasource.dart';
 import 'package:food_donation_app/data/repositories/auth_repository_impl.dart';
 import 'package:food_donation_app/data/repositories/food_donation_repository_impl.dart';
 import 'package:food_donation_app/domain/entities/freshness_check.dart';
@@ -86,8 +87,15 @@ final foodDriveEventsProvider = FutureProvider(
 final mockNgoDataSourceProvider = Provider((ref) => MockNgoDataSource());
 
 final ngoListProvider = FutureProvider((ref) async {
-  final dataSource = ref.watch(mockNgoDataSourceProvider);
-  return await dataSource.fetchNGOs();
+  try {
+    final ngoDataSource = NgoRemoteDataSource();
+    return await ngoDataSource.getAllNGOs();
+  } catch (e) {
+    // Fallback to mock data if backend fails
+    print('Error fetching NGOs from backend: $e');
+    final dataSource = ref.watch(mockNgoDataSourceProvider);
+    return await dataSource.fetchNGOs();
+  }
 });
 
 final navIndexProvider = StateProvider<int>((ref) => 0);

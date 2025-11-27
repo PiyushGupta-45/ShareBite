@@ -134,12 +134,16 @@ class ProfileScreen extends ConsumerWidget {
                       title: const Text('Add NGO'),
                       subtitle: const Text('Add a new NGO to the platform'),
                       trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-                      onTap: () {
-                        Navigator.of(context).push(
+                      onTap: () async {
+                        final result = await Navigator.of(context).push(
                           MaterialPageRoute(
                             builder: (context) => const AddNgoScreen(),
                           ),
                         );
+                        // Refresh NGO list if NGO was added successfully
+                        if (result == true && mounted) {
+                          ref.invalidate(ngoListProvider);
+                        }
                       },
                     ),
                     const Divider(),
