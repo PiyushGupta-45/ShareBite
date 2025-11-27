@@ -7,7 +7,7 @@ import 'package:food_donation_app/domain/entities/user.dart';
 class AuthRemoteDataSource {
   // Create HTTP client with longer timeout
   final http.Client _client = http.Client();
-  
+
   // Timeout duration
   static const Duration _timeoutDuration = Duration(seconds: 60);
 
@@ -170,15 +170,13 @@ class AuthRemoteDataSource {
 
   Future<User> getCurrentUser(String token) async {
     try {
-      final response = await _client
-          .get(
+      final response = await _client.get(
         Uri.parse(ApiConstants.getCurrentUser),
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $token',
         },
-      )
-          .timeout(
+      ).timeout(
         _timeoutDuration,
         onTimeout: () {
           throw Exception('Request timeout: Backend server is not responding. Please check if the server is running at ${ApiConstants.getCurrentUser}');

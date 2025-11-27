@@ -6,6 +6,7 @@ class User {
     this.picture,
     this.isEmailVerified = false,
     this.authProvider = 'email',
+    this.role = 'user', // 'user' or 'admin'
   });
 
   final String id;
@@ -14,6 +15,9 @@ class User {
   final String? picture;
   final bool isEmailVerified;
   final String authProvider;
+  final String role; // 'user' or 'admin'
+
+  bool get isAdmin => role.toLowerCase() == 'admin';
 
   factory User.fromJson(Map<String, dynamic> json) {
     return User(
@@ -23,6 +27,7 @@ class User {
       picture: json['picture'] as String?,
       isEmailVerified: json['isEmailVerified'] as bool? ?? false,
       authProvider: json['authProvider'] as String? ?? 'email',
+      role: json['role'] as String? ?? 'user',
     );
   }
 
@@ -34,6 +39,7 @@ class User {
       'picture': picture,
       'isEmailVerified': isEmailVerified,
       'authProvider': authProvider,
+      'role': role,
     };
   }
 }
