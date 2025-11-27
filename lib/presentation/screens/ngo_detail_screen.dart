@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:food_donation_app/core/theme/app_theme.dart';
 import 'package:food_donation_app/domain/entities/ngo.dart';
+import 'package:food_donation_app/presentation/screens/donation_form_screen.dart';
 import 'package:food_donation_app/presentation/widgets/primary_button.dart';
 import 'package:food_donation_app/presentation/widgets/secondary_button.dart';
 
@@ -226,14 +227,11 @@ class NgoDetailScreen extends StatelessWidget {
                   label: 'Donate',
                   icon: Icons.favorite,
                   onPressed: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text('Donating to ${ngo.name}...'),
-                        backgroundColor: AppTheme.accentColor,
-                        behavior: SnackBarBehavior.floating,
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (context) => DonationFormScreen(ngo: ngo),
                       ),
                     );
-                    // TODO: Implement donation functionality
                   },
                 ),
               ),

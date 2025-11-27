@@ -108,6 +108,8 @@ export const googleAuth = async (req, res) => {
             name: user.name,
             picture: user.picture,
             isEmailVerified: user.isEmailVerified,
+            authProvider: user.authProvider,
+            role: user.role || 'user',
           },
         },
       });
@@ -135,6 +137,8 @@ export const googleAuth = async (req, res) => {
             name: user.name,
             picture: user.picture,
             isEmailVerified: user.isEmailVerified,
+            authProvider: user.authProvider,
+            role: user.role || 'user',
           },
         },
       });
@@ -187,6 +191,7 @@ export const getCurrentUser = async (req, res) => {
           picture: user.picture,
           isEmailVerified: user.isEmailVerified,
           authProvider: user.authProvider,
+          role: user.role || 'user',
           createdAt: user.createdAt,
         },
       },
@@ -256,6 +261,8 @@ export const signUp = async (req, res) => {
           name: user.name,
           picture: user.picture,
           isEmailVerified: user.isEmailVerified,
+          authProvider: user.authProvider,
+          role: user.role || 'user',
         },
       },
     });
@@ -323,6 +330,8 @@ export const signIn = async (req, res) => {
           name: user.name,
           picture: user.picture,
           isEmailVerified: user.isEmailVerified,
+          authProvider: user.authProvider,
+          role: user.role || 'user',
         },
       },
     });

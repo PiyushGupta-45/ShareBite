@@ -36,6 +36,11 @@ const userSchema = new mongoose.Schema(
       enum: ['google', 'email'],
       default: 'google',
     },
+    role: {
+      type: String,
+      enum: ['user', 'admin'],
+      default: 'user',
+    },
   },
   {
     timestamps: true,
