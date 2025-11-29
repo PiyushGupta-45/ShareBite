@@ -4,7 +4,7 @@
     
     <application
         android:usesCleartextTraffic="true"
-        android:label="finalyear"
+        android:label="Share Bites"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity
