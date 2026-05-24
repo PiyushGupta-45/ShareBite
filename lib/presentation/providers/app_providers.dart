@@ -267,20 +267,15 @@ final acceptedRequestsProvider = StateNotifierProvider<AcceptedRequestsNotifier,
 
 // Provider for accepted NGO demands (for volunteers) - with restaurant info
 final acceptedNgoDemandsForVolunteersProvider = FutureProvider<List<NGODemand>>((ref) async {
-  try {
-    final authState = ref.watch(authProvider);
-    final token = authState.token;
+  final authState = ref.watch(authProvider);
+  final token = authState.token;
 
-    if (token == null) {
-      return <NGODemand>[];
-    }
-
-    final dataSource = NgoDemandRemoteDataSource();
-    return await dataSource.getAcceptedDemandsForVolunteers(token);
-  } catch (e) {
-    print('Error fetching accepted NGO demands for volunteers: $e');
+  if (token == null) {
     return <NGODemand>[];
   }
+
+  final dataSource = NgoDemandRemoteDataSource();
+  return await dataSource.getAcceptedDemandsForVolunteers(token);
 });
 
 // Provider for accepted NGO demands (for volunteers) - old one kept for compatibility

@@ -32,12 +32,10 @@ class _RunsScreenState extends ConsumerState<RunsScreen> {
   @override
   Widget build(BuildContext context) {
     final acceptedDemands = ref.watch(acceptedNgoDemandsForVolunteersProvider);
-    final userRuns = ref.watch(userDeliveryRunsProvider);
 
     return RefreshIndicator(
       onRefresh: () async {
         ref.invalidate(acceptedNgoDemandsForVolunteersProvider);
-        ref.invalidate(userDeliveryRunsProvider);
       },
       child: Column(
         children: [
@@ -83,17 +81,7 @@ class _RunsScreenState extends ConsumerState<RunsScreen> {
           Expanded(
             child: acceptedDemands.when(
               data: (demands) {
-                final existingDemandIds = userRuns.maybeWhen(
-                  data: (runs) => runs
-                      .map((run) => run.ngoDemandId)
-                      .whereType<String>()
-                      .toSet(),
-                  orElse: () => <String>{},
-                );
-
-                var availableDemands = demands
-                    .where((demand) => !existingDemandIds.contains(demand.id))
-                    .toList();
+                var availableDemands = List<NGODemand>.from(demands);
 
                 if (_selectedFilter == RestaurantFilter.nearby &&
                     userLatitude != null &&
