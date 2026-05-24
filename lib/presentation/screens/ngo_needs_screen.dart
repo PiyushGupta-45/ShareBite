@@ -247,25 +247,55 @@ class _DemandCard extends StatelessWidget {
             ),
           ],
           const SizedBox(height: 16),
-          Row(
-            children: [
-              Expanded(
-                child: SecondaryButton(
-                  label: 'Ignore',
-                  icon: Icons.close,
-                  onPressed: onIgnore,
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                flex: 2,
-                child: PrimaryButton(
-                  label: 'Accept',
-                  icon: Icons.check_circle,
-                  onPressed: onAccept,
-                ),
-              ),
-            ],
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final stackButtons = constraints.maxWidth < 360;
+
+              if (stackButtons) {
+                return Column(
+                  children: [
+                    SizedBox(
+                      width: double.infinity,
+                      child: SecondaryButton(
+                        label: 'Ignore',
+                        icon: Icons.close,
+                        onPressed: onIgnore,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    SizedBox(
+                      width: double.infinity,
+                      child: PrimaryButton(
+                        label: 'Accept',
+                        icon: Icons.check_circle,
+                        onPressed: onAccept,
+                      ),
+                    ),
+                  ],
+                );
+              }
+
+              return Row(
+                children: [
+                  Expanded(
+                    child: SecondaryButton(
+                      label: 'Ignore',
+                      icon: Icons.close,
+                      onPressed: onIgnore,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    flex: 2,
+                    child: PrimaryButton(
+                      label: 'Accept',
+                      icon: Icons.check_circle,
+                      onPressed: onAccept,
+                    ),
+                  ),
+                ],
+              );
+            },
           ),
         ],
       ),

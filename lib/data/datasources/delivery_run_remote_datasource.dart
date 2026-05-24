@@ -45,6 +45,7 @@ class DeliveryRunRemoteDataSource {
     required String token,
     required String restaurantId,
     required String ngoId,
+    String? ngoDemandId,
     required DateTime pickupTime,
     required DateTime deliveryTime,
     required int numberOfMeals,
@@ -62,6 +63,7 @@ class DeliveryRunRemoteDataSource {
             body: jsonEncode({
               'restaurantId': restaurantId,
               'ngoId': ngoId,
+              if (ngoDemandId != null && ngoDemandId.isNotEmpty) 'ngoDemandId': ngoDemandId,
               'pickupTime': pickupTime.toIso8601String(),
               'deliveryTime': deliveryTime.toIso8601String(),
               'numberOfMeals': numberOfMeals,
@@ -138,6 +140,7 @@ class DeliveryRunRemoteDataSource {
       deliveryTime: DateTime.parse(json['deliveryTime'] as String),
       numberOfMeals: json['numberOfMeals'] as int,
       status: json['status'] as String,
+      ngoDemandId: json['ngoDemandId'] as String?,
       pointsAwarded: (json['pointsAwarded'] as num?)?.toInt() ?? 0,
       completedAt: json['completedAt'] != null
           ? DateTime.parse(json['completedAt'] as String)

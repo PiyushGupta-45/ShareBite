@@ -12,6 +12,11 @@ const deliveryRunSchema = new mongoose.Schema(
       ref: 'NGO',
       required: true,
     },
+    ngoDemandId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'NGODemand',
+      default: null,
+    },
     volunteerId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',

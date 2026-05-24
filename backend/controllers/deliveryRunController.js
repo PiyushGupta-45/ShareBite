@@ -1,12 +1,13 @@
 import DeliveryRun from '../models/DeliveryRun.js';
 import Restaurant from '../models/Restaurant.js';
 import NGO from '../models/NGO.js';
+import NGODemand from '../models/NGODemand.js';
 import User from '../models/User.js';
 
 // Accept a delivery run (Volunteer)
 export const acceptDeliveryRun = async (req, res) => {
   try {
-    const { restaurantId, ngoId, pickupTime, deliveryTime, numberOfMeals, description, urgencyTag } = req.body;
+    const { restaurantId, ngoId, ngoDemandId, pickupTime, deliveryTime, numberOfMeals, description, urgencyTag } = req.body;
 
     // Validation
     if (!restaurantId || !ngoId || !pickupTime || !deliveryTime || !numberOfMeals) {
@@ -34,10 +35,21 @@ export const acceptDeliveryRun = async (req, res) => {
       });
     }
 
+    if (ngoDemandId) {
+      const existingRun = await DeliveryRun.findOne({ ngoDemandId });
+      if (existingRun) {
+        return res.status(400).json({
+          success: false,
+          message: 'This delivery has already been assigned to a volunteer',
+        });
+      }
+    }
+
     // Create delivery run
     const deliveryRun = await DeliveryRun.create({
       restaurantId,
       ngoId,
+      ngoDemandId: ngoDemandId || null,
       volunteerId: req.user._id,
       pickupTime: new Date(pickupTime),
       deliveryTime: new Date(deliveryTime),
@@ -80,6 +92,7 @@ export const acceptDeliveryRun = async (req, res) => {
           pickupTime: deliveryRun.pickupTime,
           deliveryTime: deliveryRun.deliveryTime,
           numberOfMeals: deliveryRun.numberOfMeals,
+          ngoDemandId: deliveryRun.ngoDemandId,
           status: deliveryRun.status,
           description: deliveryRun.description,
           urgencyTag: deliveryRun.urgencyTag,
@@ -144,6 +157,7 @@ export const getUserDeliveryRuns = async (req, res) => {
           pickupTime: run.pickupTime,
           deliveryTime: run.deliveryTime,
           numberOfMeals: run.numberOfMeals,
+          ngoDemandId: run.ngoDemandId,
           status: run.status,
           description: run.description,
           urgencyTag: run.urgencyTag,
@@ -206,6 +220,12 @@ export const updateDeliveryRunStatus = async (req, res) => {
           completedRides: 1,
         },
       });
+
+      if (deliveryRun.ngoDemandId) {
+        await NGODemand.findByIdAndUpdate(deliveryRun.ngoDemandId, {
+          status: 'fulfilled',
+        });
+      }
     }
 
     await deliveryRun.save();
@@ -242,6 +262,7 @@ export const updateDeliveryRunStatus = async (req, res) => {
           pickupTime: deliveryRun.pickupTime,
           deliveryTime: deliveryRun.deliveryTime,
           numberOfMeals: deliveryRun.numberOfMeals,
+          ngoDemandId: deliveryRun.ngoDemandId,
           status: deliveryRun.status,
           description: deliveryRun.description,
           urgencyTag: deliveryRun.urgencyTag,

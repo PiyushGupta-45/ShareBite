@@ -21,6 +21,7 @@ class DeliveryRun {
     required this.deliveryTime,
     required this.numberOfMeals,
     required this.status,
+    this.ngoDemandId,
     this.pointsAwarded = 0,
     this.completedAt,
     this.description,
@@ -46,6 +47,7 @@ class DeliveryRun {
   final DateTime deliveryTime;
   final int numberOfMeals;
   final String status; // 'pending', 'accepted', 'in_progress', 'completed'
+  final String? ngoDemandId;
   final int pointsAwarded;
   final DateTime? completedAt;
   final String? description;

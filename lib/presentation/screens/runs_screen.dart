@@ -3,10 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:food_donation_app/core/theme/app_theme.dart';
 import 'package:food_donation_app/data/datasources/delivery_run_remote_datasource.dart';
-import 'package:food_donation_app/domain/entities/restaurant.dart';
 import 'package:food_donation_app/domain/entities/ngo_demand.dart';
 import 'package:food_donation_app/presentation/providers/app_providers.dart';
-import 'package:food_donation_app/presentation/screens/accept_delivery_screen.dart';
 import 'package:food_donation_app/presentation/screens/ride_details_screen.dart';
 import 'package:food_donation_app/presentation/widgets/app_card.dart';
 import 'package:food_donation_app/presentation/widgets/primary_button.dart';
@@ -33,183 +31,159 @@ class _RunsScreenState extends ConsumerState<RunsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final restaurants = ref.watch(restaurantsProvider);
     final acceptedDemands = ref.watch(acceptedNgoDemandsForVolunteersProvider);
     final userRuns = ref.watch(userDeliveryRunsProvider);
 
-    return Column(
-      children: [
-        // Title and Filter
-        Padding(
-          padding: const EdgeInsets.all(16),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                'Restaurant Partners',
-                style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      fontWeight: FontWeight.bold,
-                      color: AppTheme.primaryColor,
-                    ),
-              ),
-              Row(
-                children: [
-                  _FilterChip(
-                    label: 'All',
-                    isSelected: _selectedFilter == RestaurantFilter.all,
-                    onTap: () => setState(() => _selectedFilter = RestaurantFilter.all),
-                  ),
-                  const SizedBox(width: 8),
-                  _FilterChip(
-                    label: '<5 km',
-                    isSelected: _selectedFilter == RestaurantFilter.nearby,
-                    onTap: () => setState(() => _selectedFilter = RestaurantFilter.nearby),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-        // Restaurant Accepted Demands Section (for volunteers)
-        acceptedDemands.when(
-          data: (demands) {
-            final activeRunKeys = userRuns.maybeWhen(
-              data: (runs) => runs
-                  .where((run) => run.status == 'accepted' || run.status == 'in_progress')
-                  .map((run) => '${run.restaurantId}_${run.ngoId}')
-                  .toSet(),
-              orElse: () => <String>{},
-            );
-            final availableDemands = demands
-                .where((demand) => !activeRunKeys.contains('${demand.restaurantId}_${demand.ngoId}'))
-                .toList();
+    return RefreshIndicator(
+      onRefresh: () async {
+        ref.invalidate(acceptedNgoDemandsForVolunteersProvider);
+        ref.invalidate(userDeliveryRunsProvider);
+      },
+      child: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final isCompact = constraints.maxWidth < 420;
 
-            if (availableDemands.isNotEmpty) {
-              return Expanded(
-                flex: 2,
-                child: Column(
+                return Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                      child: Text(
-                        'Restaurant Accepted Deliveries',
-                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                              fontWeight: FontWeight.bold,
-                              color: AppTheme.primaryColor,
-                            ),
-                      ),
+                    Text(
+                      'Restaurant Accepted Deliveries',
+                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                            fontWeight: FontWeight.bold,
+                            color: AppTheme.primaryColor,
+                          ),
                     ),
-                    Expanded(
-                      child: ListView.builder(
-                        padding: const EdgeInsets.symmetric(horizontal: 16),
-                        itemCount: availableDemands.length,
-                        itemBuilder: (context, index) {
-                          return _RestaurantAcceptedDemandCard(
-                            demand: availableDemands[index],
-                            userLat: userLatitude ?? 0.0,
-                            userLon: userLongitude ?? 0.0,
-                          );
-                        },
-                      ),
-                    ),
-                  ],
-                ),
-              );
-            }
-            return const SizedBox.shrink();
-          },
-          loading: () => const SizedBox.shrink(),
-          error: (_, __) => const SizedBox.shrink(),
-        ),
-        // Restaurants list
-        Expanded(
-          child: RefreshIndicator(
-            onRefresh: () async {
-              ref.invalidate(restaurantsProvider);
-              ref.invalidate(acceptedNgoDemandsForVolunteersProvider);
-            },
-            child: restaurants.when(
-              data: (items) {
-                // Filter by location if selected and location is available
-                final filtered = _selectedFilter == RestaurantFilter.nearby && userLatitude != null && userLongitude != null ? items.where((r) => r.distanceFrom(userLatitude!, userLongitude!) < 5).toList() : items;
-
-                // Sort by distance if location is available
-                final sorted = List<Restaurant>.from(filtered);
-                if (userLatitude != null && userLongitude != null) {
-                  sorted.sort((a, b) {
-                    final distA = a.distanceFrom(userLatitude!, userLongitude!);
-                    final distB = b.distanceFrom(userLatitude!, userLongitude!);
-                    return distA.compareTo(distB);
-                  });
-                }
-
-                if (sorted.isEmpty) {
-                  return Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
+                    const SizedBox(height: 12),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
                       children: [
-                        Icon(Icons.restaurant, size: 64, color: Colors.grey[400]),
-                        const SizedBox(height: 16),
-                        Text(
-                          'No restaurants found',
-                          style: Theme.of(context).textTheme.titleMedium,
+                        _FilterChip(
+                          label: 'All',
+                          isSelected: _selectedFilter == RestaurantFilter.all,
+                          onTap: () => setState(() => _selectedFilter = RestaurantFilter.all),
                         ),
-                        const SizedBox(height: 8),
-                        Text(
-                          'Try a different filter',
-                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                color: Colors.grey[600],
-                              ),
+                        _FilterChip(
+                          label: '<5 km',
+                          isSelected: _selectedFilter == RestaurantFilter.nearby,
+                          onTap: () => setState(() => _selectedFilter = RestaurantFilter.nearby),
                         ),
                       ],
                     ),
+                    if (!isCompact) const SizedBox.shrink(),
+                  ],
+                );
+              },
+            ),
+          ),
+          Expanded(
+            child: acceptedDemands.when(
+              data: (demands) {
+                final existingDemandIds = userRuns.maybeWhen(
+                  data: (runs) => runs
+                      .map((run) => run.ngoDemandId)
+                      .whereType<String>()
+                      .toSet(),
+                  orElse: () => <String>{},
+                );
+
+                var availableDemands = demands
+                    .where((demand) => !existingDemandIds.contains(demand.id))
+                    .toList();
+
+                if (_selectedFilter == RestaurantFilter.nearby &&
+                    userLatitude != null &&
+                    userLongitude != null) {
+                  availableDemands = availableDemands.where((demand) {
+                    final lat = demand.ngoLatitude;
+                    final lon = demand.ngoLongitude;
+                    if (lat == null || lon == null) {
+                      return false;
+                    }
+                    return _calculateVolunteerDistance(lat, lon) < 5;
+                  }).toList();
+                }
+
+                if (availableDemands.isEmpty) {
+                  return ListView(
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    children: [
+                      const SizedBox(height: 80),
+                      Icon(Icons.delivery_dining, size: 64, color: Colors.grey[400]),
+                      const SizedBox(height: 16),
+                      Center(
+                        child: Text(
+                          'No accepted restaurant deliveries available',
+                          style: Theme.of(context).textTheme.titleMedium,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Center(
+                        child: Text(
+                          'Only restaurant-accepted NGO demands appear here.',
+                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                color: Colors.grey[600],
+                              ),
+                          textAlign: TextAlign.center,
+                        ),
+                      ),
+                    ],
                   );
                 }
 
                 return ListView.builder(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
-                  itemCount: sorted.length,
+                  itemCount: availableDemands.length,
                   itemBuilder: (context, index) {
-                    return _RestaurantCard(
-                      restaurant: sorted[index],
+                    return _RestaurantAcceptedDemandCard(
+                      demand: availableDemands[index],
                       userLat: userLatitude ?? 0.0,
                       userLon: userLongitude ?? 0.0,
-                      onDeliveryAccepted: () {
-                        ref.invalidate(restaurantsProvider);
-                      },
                     );
                   },
                 );
               },
               loading: () => const Center(child: CircularProgressIndicator()),
-              error: (error, stack) => Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(Icons.error_outline, size: 64, color: Colors.red[300]),
-                    const SizedBox(height: 16),
-                    Text(
-                      'Failed to load restaurants',
-                      style: Theme.of(context).textTheme.titleMedium,
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      error.toString(),
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: Colors.grey[600],
-                          ),
-                      textAlign: TextAlign.center,
-                    ),
-                  ],
+              error: (error, _) => Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Text(
+                    'Failed to load accepted deliveries: $error',
+                    textAlign: TextAlign.center,
+                  ),
                 ),
               ),
             ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
+
+  double _calculateVolunteerDistance(double ngoLatitude, double ngoLongitude) {
+    if (userLatitude == null || userLongitude == null) {
+      return double.infinity;
+    }
+
+    const double earthRadius = 6371;
+    final double dLat = _toRadians(ngoLatitude - userLatitude!);
+    final double dLon = _toRadians(ngoLongitude - userLongitude!);
+
+    final double a = (dLat / 2) * (dLat / 2) +
+        math.cos(_toRadians(userLatitude!)) *
+            math.cos(_toRadians(ngoLatitude)) *
+            (dLon / 2) *
+            (dLon / 2);
+    final double c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a));
+
+    return earthRadius * c;
+  }
+
+  double _toRadians(double degrees) => degrees * (3.141592653589793 / 180);
 }
 
 class _FilterChip extends StatelessWidget {
@@ -422,6 +396,7 @@ class _RestaurantAcceptedDemandCardState extends ConsumerState<_RestaurantAccept
                               token: token,
                               restaurantId: demand.restaurantId!,
                               ngoId: demand.ngoId,
+                              ngoDemandId: demand.id,
                               pickupTime: demand.requiredBy.subtract(const Duration(hours: 1)),
                               deliveryTime: demand.requiredBy,
                               numberOfMeals: demand.amount,
@@ -467,178 +442,6 @@ class _RestaurantAcceptedDemandCardState extends ConsumerState<_RestaurantAccept
                             }
                           }
                         },
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _RestaurantCard extends StatelessWidget {
-  const _RestaurantCard({
-    required this.restaurant,
-    required this.userLat,
-    required this.userLon,
-    required this.onDeliveryAccepted,
-  });
-
-  final Restaurant restaurant;
-  final double userLat;
-  final double userLon;
-  final VoidCallback onDeliveryAccepted;
-
-  Future<void> _openGoogleMaps() async {
-    final url = Uri.parse(
-      'https://www.google.com/maps/search/?api=1&query=${restaurant.latitude},${restaurant.longitude}&query_place_id=${restaurant.name}',
-    );
-
-    if (await canLaunchUrl(url)) {
-      await launchUrl(url, mode: LaunchMode.externalApplication);
-    } else {
-      throw 'Could not launch Google Maps';
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    // Only calculate distance if user location is available (not 0.0)
-    final distance = (userLat != 0.0 && userLon != 0.0) ? restaurant.distanceFrom(userLat, userLon) : null;
-
-    return AppCard(
-      margin: const EdgeInsets.only(bottom: 12),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Restaurant Image and Info
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Image
-              ClipRRect(
-                borderRadius: BorderRadius.circular(12),
-                child: restaurant.image != null && restaurant.image!.isNotEmpty
-                    ? Image.network(
-                        restaurant.image!,
-                        width: 100,
-                        height: 100,
-                        fit: BoxFit.cover,
-                        errorBuilder: (context, error, stackTrace) {
-                          return Container(
-                            width: 100,
-                            height: 100,
-                            color: AppTheme.primaryColor.withOpacity(0.1),
-                            child: Icon(
-                              Icons.restaurant,
-                              color: AppTheme.primaryColor,
-                              size: 40,
-                            ),
-                          );
-                        },
-                      )
-                    : Container(
-                        width: 100,
-                        height: 100,
-                        color: AppTheme.primaryColor.withOpacity(0.1),
-                        child: Icon(
-                          Icons.restaurant,
-                          color: AppTheme.primaryColor,
-                          size: 40,
-                        ),
-                      ),
-              ),
-              const SizedBox(width: 12),
-              // Restaurant Details
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      restaurant.name,
-                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                            fontWeight: FontWeight.bold,
-                          ),
-                    ),
-                    const SizedBox(height: 4),
-                    Row(
-                      children: [
-                        Icon(Icons.location_on, size: 14, color: Colors.grey[600]),
-                        const SizedBox(width: 4),
-                        Expanded(
-                          child: Text(
-                            restaurant.location,
-                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                  color: Colors.grey[600],
-                                ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    if (distance != null) ...[
-                      const SizedBox(height: 4),
-                      Row(
-                        children: [
-                          Icon(Icons.straighten, size: 14, color: AppTheme.primaryColor),
-                          const SizedBox(width: 4),
-                          Text(
-                            '${distance.toStringAsFixed(1)} km away',
-                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                  color: AppTheme.primaryColor,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                          ),
-                        ],
-                      ),
-                    ],
-                    if (restaurant.description != null && restaurant.description!.isNotEmpty) ...[
-                      const SizedBox(height: 8),
-                      Text(
-                        restaurant.description!,
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: Colors.grey[600],
-                            ),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          // Actions
-          Row(
-            children: [
-              Expanded(
-                child: OutlinedButton.icon(
-                  onPressed: _openGoogleMaps,
-                  icon: const Icon(Icons.directions, size: 16),
-                  label: const Text('Navigate'),
-                  style: OutlinedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 8),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                flex: 2,
-                child: PrimaryButton(
-                  label: 'Accept',
-                  icon: Icons.check_circle,
-                  onPressed: () async {
-                    final result = await Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (context) => AcceptDeliveryScreen(restaurant: restaurant),
-                      ),
-                    );
-                    // Refresh restaurant list if delivery was accepted
-                    if (result == true) {
-                      onDeliveryAccepted();
-                    }
-                  },
                 ),
               ),
             ],

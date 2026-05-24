@@ -34,6 +34,9 @@ class _RideDetailsScreenState extends ConsumerState<RideDetailsScreen> with Sing
 
     return Scaffold(
       appBar: AppBar(
+        backgroundColor: AppTheme.primaryColor,
+        foregroundColor: Colors.white,
+        elevation: 0,
         title: const Text('Ride Details'),
         bottom: TabBar(
           controller: _tabController,
@@ -42,7 +45,7 @@ class _RideDetailsScreenState extends ConsumerState<RideDetailsScreen> with Sing
             Tab(text: 'Completed'),
           ],
           labelColor: Colors.white,
-          unselectedLabelColor: Colors.white70,
+          unselectedLabelColor: Colors.white.withOpacity(0.75),
           indicatorColor: Colors.white,
         ),
       ),

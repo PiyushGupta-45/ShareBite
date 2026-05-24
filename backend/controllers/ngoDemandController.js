@@ -1,6 +1,7 @@
 import NGODemand from '../models/NGODemand.js';
 import NGO from '../models/NGO.js';
 import Restaurant from '../models/Restaurant.js';
+import DeliveryRun from '../models/DeliveryRun.js';
 
 // Create NGO Demand (NGO Admin only)
 export const createDemand = async (req, res) => {
@@ -124,7 +125,15 @@ export const getAllDemands = async (req, res) => {
 // Get accepted demands for volunteers (with restaurant info)
 export const getAcceptedDemandsForVolunteers = async (req, res) => {
   try {
-    const demands = await NGODemand.find({ status: 'accepted' })
+    const assignedDemandIds = await DeliveryRun.find({
+      ngoDemandId: { $ne: null },
+    })
+      .distinct('ngoDemandId');
+
+    const demands = await NGODemand.find({
+      status: 'accepted',
+      _id: { $nin: assignedDemandIds },
+    })
       .sort({ requiredBy: 1, createdAt: -1 })
       .select('-__v')
       .populate('ngoId', 'name location address latitude longitude')
@@ -136,9 +145,16 @@ export const getAcceptedDemandsForVolunteers = async (req, res) => {
       .filter((demand) => !demand.restaurantId)
       .map((demand) => demand.acceptedBy?._id?.toString())
       .filter(Boolean);
+    const restaurantEmails = demands
+      .filter((demand) => !demand.restaurantId)
+      .map((demand) => demand.acceptedBy?.email?.toLowerCase())
+      .filter(Boolean);
 
     const restaurants = await Restaurant.find({
-      createdBy: { $in: restaurantOwnerIds },
+      $or: [
+        { createdBy: { $in: restaurantOwnerIds } },
+        { email: { $in: restaurantEmails } },
+      ],
     })
       .select('name location address latitude longitude phone email createdBy')
       .lean();
@@ -146,33 +162,38 @@ export const getAcceptedDemandsForVolunteers = async (req, res) => {
     const restaurantByOwnerId = new Map(
       restaurants.map((restaurant) => [restaurant.createdBy.toString(), restaurant])
     );
+    const restaurantByEmail = new Map(
+      restaurants.map((restaurant) => [restaurant.email.toLowerCase(), restaurant])
+    );
 
     res.status(200).json({
       success: true,
       data: {
         demands: demands.map((demand) => {
-          const fallbackRestaurant = restaurantByOwnerId.get(demand.acceptedBy?._id?.toString());
+          const fallbackRestaurant =
+            restaurantByOwnerId.get(demand.acceptedBy?._id?.toString()) ??
+            restaurantByEmail.get(demand.acceptedBy?.email?.toLowerCase());
           const restaurant = demand.restaurantId || fallbackRestaurant;
 
           return {
-          restaurantId: restaurant?._id || null,
-          id: demand._id,
-          ngoId: demand.ngoId._id || demand.ngoId,
-          ngoName: demand.ngoName,
-          ngoLocation: demand.ngoId?.location || '',
-          ngoAddress: demand.ngoId?.address || '',
-          ngoLatitude: demand.ngoId?.latitude || 0,
-          ngoLongitude: demand.ngoId?.longitude || 0,
-          restaurantName: restaurant?.name || demand.acceptedBy?.name || 'Unknown Restaurant',
-          restaurantEmail: restaurant?.email || demand.acceptedBy?.email || '',
-          amount: demand.amount,
-          unit: demand.unit,
-          requiredBy: demand.requiredBy,
-          description: demand.description,
-          status: demand.status,
-          acceptedAt: demand.acceptedAt,
-          createdAt: demand.createdAt,
-        };
+            restaurantId: restaurant?._id || null,
+            id: demand._id,
+            ngoId: demand.ngoId._id || demand.ngoId,
+            ngoName: demand.ngoName,
+            ngoLocation: demand.ngoId?.location || '',
+            ngoAddress: demand.ngoId?.address || '',
+            ngoLatitude: demand.ngoId?.latitude || 0,
+            ngoLongitude: demand.ngoId?.longitude || 0,
+            restaurantName: restaurant?.name || demand.acceptedBy?.name || 'Unknown Restaurant',
+            restaurantEmail: restaurant?.email || demand.acceptedBy?.email || '',
+            amount: demand.amount,
+            unit: demand.unit,
+            requiredBy: demand.requiredBy,
+            description: demand.description,
+            status: demand.status,
+            acceptedAt: demand.acceptedAt,
+            createdAt: demand.createdAt,
+          };
         }),
       },
     });
