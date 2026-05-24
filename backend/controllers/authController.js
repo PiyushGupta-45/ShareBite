@@ -110,6 +110,8 @@ export const googleAuth = async (req, res) => {
             isEmailVerified: user.isEmailVerified,
             authProvider: user.authProvider,
             role: user.role || 'user',
+            rewardPoints: user.rewardPoints || 0,
+            completedRides: user.completedRides || 0,
           },
         },
       });
@@ -139,6 +141,8 @@ export const googleAuth = async (req, res) => {
             isEmailVerified: user.isEmailVerified,
             authProvider: user.authProvider,
             role: user.role || 'user',
+            rewardPoints: user.rewardPoints || 0,
+            completedRides: user.completedRides || 0,
           },
         },
       });
@@ -192,6 +196,8 @@ export const getCurrentUser = async (req, res) => {
           isEmailVerified: user.isEmailVerified,
           authProvider: user.authProvider,
           role: user.role || 'user',
+          rewardPoints: user.rewardPoints || 0,
+          completedRides: user.completedRides || 0,
           createdAt: user.createdAt,
         },
       },
@@ -263,6 +269,8 @@ export const signUp = async (req, res) => {
           isEmailVerified: user.isEmailVerified,
           authProvider: user.authProvider,
           role: user.role || 'user',
+          rewardPoints: user.rewardPoints || 0,
+          completedRides: user.completedRides || 0,
         },
       },
     });
@@ -332,6 +340,8 @@ export const signIn = async (req, res) => {
           isEmailVerified: user.isEmailVerified,
           authProvider: user.authProvider,
           role: user.role || 'user',
+          rewardPoints: user.rewardPoints || 0,
+          completedRides: user.completedRides || 0,
         },
       },
     });

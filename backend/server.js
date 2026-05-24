@@ -12,6 +12,7 @@ import ngoRoutes from './routes/ngoRoutes.js';
 import restaurantRoutes from './routes/restaurantRoutes.js';
 import deliveryRunRoutes from './routes/deliveryRunRoutes.js';
 import ngoDemandRoutes from './routes/ngoDemandRoutes.js';
+import voucherRoutes from './routes/voucherRoutes.js';
 
 // Validate required environment variables
 const requiredEnvVars = ['MONGODB_URI', 'JWT_SECRET', 'GOOGLE_CLIENT_ID'];
@@ -112,6 +113,7 @@ app.use('/api/ngos', ngoRoutes);
 app.use('/api/restaurants', restaurantRoutes);
 app.use('/api/delivery-runs', deliveryRunRoutes);
 app.use('/api/ngo-demands', ngoDemandRoutes);
+app.use('/api/vouchers', voucherRoutes);
 
 // Error handling middleware
 app.use((err, req, res, next) => {

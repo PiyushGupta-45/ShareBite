@@ -7,14 +7,23 @@ class DeliveryRunRemoteDataSource {
   final http.Client _client = http.Client();
   static const Duration _timeoutDuration = Duration(seconds: 30);
 
-  Future<List<DeliveryRun>> getUserDeliveryRuns({String? status}) async {
+  Future<List<DeliveryRun>> getUserDeliveryRuns({
+    required String token,
+    String? status,
+  }) async {
     try {
       final url = status != null
           ? '${ApiConstants.baseUrl}/delivery-runs?status=$status'
           : '${ApiConstants.baseUrl}/delivery-runs';
       
       final response = await _client
-          .get(Uri.parse(url))
+          .get(
+            Uri.parse(url),
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': 'Bearer $token',
+            },
+          )
           .timeout(_timeoutDuration);
 
       final data = jsonDecode(response.body) as Map<String, dynamic>;
@@ -129,6 +138,10 @@ class DeliveryRunRemoteDataSource {
       deliveryTime: DateTime.parse(json['deliveryTime'] as String),
       numberOfMeals: json['numberOfMeals'] as int,
       status: json['status'] as String,
+      pointsAwarded: (json['pointsAwarded'] as num?)?.toInt() ?? 0,
+      completedAt: json['completedAt'] != null
+          ? DateTime.parse(json['completedAt'] as String)
+          : null,
       description: json['description'] as String?,
       urgencyTag: json['urgencyTag'] as String?,
     );

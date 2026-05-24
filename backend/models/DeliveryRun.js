@@ -42,6 +42,14 @@ const deliveryRunSchema = new mongoose.Schema(
       type: String,
       default: 'Flex',
     },
+    pointsAwarded: {
+      type: Number,
+      default: 0,
+    },
+    completedAt: {
+      type: Date,
+      default: null,
+    },
   },
   {
     timestamps: true,

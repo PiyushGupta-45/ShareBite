@@ -41,6 +41,39 @@ const userSchema = new mongoose.Schema(
       enum: ['user', 'admin', 'restaurant', 'ngo_admin'],
       default: 'user',
     },
+    rewardPoints: {
+      type: Number,
+      default: 0,
+    },
+    completedRides: {
+      type: Number,
+      default: 0,
+    },
+    redeemedVouchers: [
+      {
+        voucherId: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: 'Voucher',
+          required: true,
+        },
+        code: {
+          type: String,
+          required: true,
+        },
+        title: {
+          type: String,
+          required: true,
+        },
+        pointsUsed: {
+          type: Number,
+          required: true,
+        },
+        redeemedAt: {
+          type: Date,
+          default: Date.now,
+        },
+      },
+    ],
   },
   {
     timestamps: true,

@@ -1,5 +1,6 @@
 import NGODemand from '../models/NGODemand.js';
 import NGO from '../models/NGO.js';
+import Restaurant from '../models/Restaurant.js';
 
 // Create NGO Demand (NGO Admin only)
 export const createDemand = async (req, res) => {
@@ -128,12 +129,33 @@ export const getAcceptedDemandsForVolunteers = async (req, res) => {
       .select('-__v')
       .populate('ngoId', 'name location address latitude longitude')
       .populate('acceptedBy', 'name email')
+      .populate('restaurantId', 'name location address latitude longitude phone email')
       .lean();
+
+    const restaurantOwnerIds = demands
+      .filter((demand) => !demand.restaurantId)
+      .map((demand) => demand.acceptedBy?._id?.toString())
+      .filter(Boolean);
+
+    const restaurants = await Restaurant.find({
+      createdBy: { $in: restaurantOwnerIds },
+    })
+      .select('name location address latitude longitude phone email createdBy')
+      .lean();
+
+    const restaurantByOwnerId = new Map(
+      restaurants.map((restaurant) => [restaurant.createdBy.toString(), restaurant])
+    );
 
     res.status(200).json({
       success: true,
       data: {
-        demands: demands.map((demand) => ({
+        demands: demands.map((demand) => {
+          const fallbackRestaurant = restaurantByOwnerId.get(demand.acceptedBy?._id?.toString());
+          const restaurant = demand.restaurantId || fallbackRestaurant;
+
+          return {
+          restaurantId: restaurant?._id || null,
           id: demand._id,
           ngoId: demand.ngoId._id || demand.ngoId,
           ngoName: demand.ngoName,
@@ -141,8 +163,8 @@ export const getAcceptedDemandsForVolunteers = async (req, res) => {
           ngoAddress: demand.ngoId?.address || '',
           ngoLatitude: demand.ngoId?.latitude || 0,
           ngoLongitude: demand.ngoId?.longitude || 0,
-          restaurantName: demand.acceptedBy?.name || 'Unknown Restaurant',
-          restaurantEmail: demand.acceptedBy?.email || '',
+          restaurantName: restaurant?.name || demand.acceptedBy?.name || 'Unknown Restaurant',
+          restaurantEmail: restaurant?.email || demand.acceptedBy?.email || '',
           amount: demand.amount,
           unit: demand.unit,
           requiredBy: demand.requiredBy,
@@ -150,7 +172,8 @@ export const getAcceptedDemandsForVolunteers = async (req, res) => {
           status: demand.status,
           acceptedAt: demand.acceptedAt,
           createdAt: demand.createdAt,
-        })),
+        };
+        }),
       },
     });
   } catch (error) {
@@ -237,9 +260,21 @@ export const acceptDemand = async (req, res) => {
       });
     }
 
+    const restaurant = await Restaurant.findOne({ createdBy: req.user._id })
+      .sort({ createdAt: -1 })
+      .lean();
+
+    if (!restaurant) {
+      return res.status(400).json({
+        success: false,
+        message: 'No restaurant profile found for this account',
+      });
+    }
+
     // Update demand
     demand.status = 'accepted';
     demand.acceptedBy = req.user._id;
+    demand.restaurantId = restaurant._id;
     demand.acceptedAt = new Date();
     await demand.save();
 
@@ -257,6 +292,7 @@ export const acceptDemand = async (req, res) => {
           description: demand.description,
           status: demand.status,
           acceptedBy: demand.acceptedBy,
+          restaurantId: demand.restaurantId,
           acceptedAt: demand.acceptedAt,
         },
       },

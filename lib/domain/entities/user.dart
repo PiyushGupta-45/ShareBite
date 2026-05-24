@@ -7,6 +7,8 @@ class User {
     this.isEmailVerified = false,
     this.authProvider = 'email',
     this.role = 'user', // 'user', 'admin', 'restaurant', or 'ngo_admin'
+    this.rewardPoints = 0,
+    this.completedRides = 0,
   });
 
   final String id;
@@ -16,6 +18,8 @@ class User {
   final bool isEmailVerified;
   final String authProvider;
   final String role; // 'user', 'admin', 'restaurant', or 'ngo_admin'
+  final int rewardPoints;
+  final int completedRides;
 
   bool get isAdmin => role.toLowerCase() == 'admin';
   bool get isRestaurant => role.toLowerCase() == 'restaurant';
@@ -31,6 +35,8 @@ class User {
       isEmailVerified: json['isEmailVerified'] as bool? ?? false,
       authProvider: json['authProvider'] as String? ?? 'email',
       role: json['role'] as String? ?? 'user',
+      rewardPoints: (json['rewardPoints'] as num?)?.toInt() ?? 0,
+      completedRides: (json['completedRides'] as num?)?.toInt() ?? 0,
     );
   }
 
@@ -43,6 +49,8 @@ class User {
       'isEmailVerified': isEmailVerified,
       'authProvider': authProvider,
       'role': role,
+      'rewardPoints': rewardPoints,
+      'completedRides': completedRides,
     };
   }
 }

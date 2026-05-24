@@ -1,6 +1,7 @@
 import DeliveryRun from '../models/DeliveryRun.js';
 import Restaurant from '../models/Restaurant.js';
 import NGO from '../models/NGO.js';
+import User from '../models/User.js';
 
 // Accept a delivery run (Volunteer)
 export const acceptDeliveryRun = async (req, res) => {
@@ -82,6 +83,8 @@ export const acceptDeliveryRun = async (req, res) => {
           status: deliveryRun.status,
           description: deliveryRun.description,
           urgencyTag: deliveryRun.urgencyTag,
+          pointsAwarded: deliveryRun.pointsAwarded,
+          completedAt: deliveryRun.completedAt,
           createdAt: deliveryRun.createdAt,
         },
       },
@@ -144,6 +147,8 @@ export const getUserDeliveryRuns = async (req, res) => {
           status: run.status,
           description: run.description,
           urgencyTag: run.urgencyTag,
+          pointsAwarded: run.pointsAwarded,
+          completedAt: run.completedAt,
           createdAt: run.createdAt,
         })),
       },
@@ -188,7 +193,21 @@ export const updateDeliveryRunStatus = async (req, res) => {
       });
     }
 
+    const previousStatus = deliveryRun.status;
     deliveryRun.status = status;
+
+    if (status === 'completed' && previousStatus !== 'completed') {
+      deliveryRun.completedAt = new Date();
+      deliveryRun.pointsAwarded = 10;
+
+      await User.findByIdAndUpdate(req.user._id, {
+        $inc: {
+          rewardPoints: 10,
+          completedRides: 1,
+        },
+      });
+    }
+
     await deliveryRun.save();
 
     await deliveryRun.populate('restaurantId', 'name location address latitude longitude phone email');
@@ -226,6 +245,8 @@ export const updateDeliveryRunStatus = async (req, res) => {
           status: deliveryRun.status,
           description: deliveryRun.description,
           urgencyTag: deliveryRun.urgencyTag,
+          pointsAwarded: deliveryRun.pointsAwarded,
+          completedAt: deliveryRun.completedAt,
           createdAt: deliveryRun.createdAt,
         },
       },

@@ -4,6 +4,7 @@ import 'package:food_donation_app/core/theme/app_theme.dart';
 import 'package:food_donation_app/presentation/providers/app_providers.dart';
 import 'package:food_donation_app/presentation/screens/add_ngo_screen.dart';
 import 'package:food_donation_app/presentation/screens/add_restaurant_screen.dart';
+import 'package:food_donation_app/presentation/screens/create_voucher_screen.dart';
 import 'package:food_donation_app/presentation/widgets/app_card.dart';
 import 'package:food_donation_app/presentation/widgets/secondary_button.dart';
 
@@ -197,6 +198,30 @@ class ProfileScreen extends ConsumerWidget {
                         if (result == true) {
                           ref.invalidate(restaurantsProvider);
                         }
+                      },
+                    ),
+                    const Divider(),
+                    ListTile(
+                      leading: Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.amber.withOpacity(0.15),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: const Icon(
+                          Icons.redeem,
+                          color: Colors.amber,
+                        ),
+                      ),
+                      title: const Text('Create Voucher'),
+                      subtitle: const Text('Create redeemable reward vouchers for volunteers'),
+                      trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+                      onTap: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (context) => const CreateVoucherScreen(),
+                          ),
+                        );
                       },
                     ),
                   ],

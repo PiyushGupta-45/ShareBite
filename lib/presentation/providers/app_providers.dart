@@ -11,12 +11,15 @@ import 'package:food_donation_app/data/datasources/mock_restaurant_data_source.d
 import 'package:food_donation_app/data/datasources/restaurant_remote_datasource.dart';
 import 'package:food_donation_app/data/datasources/delivery_run_remote_datasource.dart';
 import 'package:food_donation_app/data/datasources/ngo_demand_remote_datasource.dart';
+import 'package:food_donation_app/data/datasources/voucher_remote_datasource.dart';
 import 'package:food_donation_app/data/repositories/auth_repository_impl.dart';
 import 'package:food_donation_app/domain/entities/ngo_demand.dart';
 import 'package:food_donation_app/data/repositories/food_donation_repository_impl.dart';
 import 'package:food_donation_app/domain/entities/delivery_run.dart';
 import 'package:food_donation_app/domain/entities/freshness_check.dart';
+import 'package:food_donation_app/domain/entities/redeemed_voucher.dart';
 import 'package:food_donation_app/domain/entities/user.dart';
+import 'package:food_donation_app/domain/entities/voucher.dart';
 import 'package:food_donation_app/domain/repositories/food_donation_repository.dart';
 import 'package:food_donation_app/domain/usecases/get_analytics_insights.dart';
 import 'package:food_donation_app/domain/usecases/get_food_drive_events.dart';
@@ -120,10 +123,40 @@ final userDeliveryRunsProvider = FutureProvider((ref) async {
     }
 
     final deliveryRunDataSource = DeliveryRunRemoteDataSource();
-    return await deliveryRunDataSource.getUserDeliveryRuns();
+    return await deliveryRunDataSource.getUserDeliveryRuns(token: token);
   } catch (e) {
     print('Error fetching user delivery runs: $e');
     return <DeliveryRun>[];
+  }
+});
+
+final voucherRemoteDataSourceProvider = Provider((ref) => VoucherRemoteDataSource());
+
+final activeVouchersProvider = FutureProvider<List<Voucher>>((ref) async {
+  try {
+    final token = ref.watch(authProvider).token;
+    if (token == null) {
+      return <Voucher>[];
+    }
+
+    return await ref.watch(voucherRemoteDataSourceProvider).getActiveVouchers(token);
+  } catch (e) {
+    print('Error fetching active vouchers: $e');
+    return <Voucher>[];
+  }
+});
+
+final redeemedVouchersProvider = FutureProvider<List<RedeemedVoucher>>((ref) async {
+  try {
+    final token = ref.watch(authProvider).token;
+    if (token == null) {
+      return <RedeemedVoucher>[];
+    }
+
+    return await ref.watch(voucherRemoteDataSourceProvider).getRedeemedVouchers(token);
+  } catch (e) {
+    print('Error fetching redeemed vouchers: $e');
+    return <RedeemedVoucher>[];
   }
 });
 

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:food_donation_app/core/theme/app_theme.dart';
+import 'package:food_donation_app/data/datasources/delivery_run_remote_datasource.dart';
 import 'package:food_donation_app/domain/entities/delivery_run.dart';
 import 'package:food_donation_app/presentation/providers/app_providers.dart';
 import 'package:food_donation_app/presentation/widgets/app_card.dart';
@@ -139,7 +140,7 @@ class _RideDetailsScreenState extends ConsumerState<RideDetailsScreen> with Sing
   }
 }
 
-class _RideCard extends StatelessWidget {
+class _RideCard extends ConsumerStatefulWidget {
   const _RideCard({
     required this.run,
     required this.status,
@@ -149,7 +150,70 @@ class _RideCard extends StatelessWidget {
   final String status;
 
   @override
+  ConsumerState<_RideCard> createState() => _RideCardState();
+}
+
+class _RideCardState extends ConsumerState<_RideCard> {
+  bool _isUpdating = false;
+
+  Future<void> _updateStatus(String nextStatus) async {
+    final token = ref.read(authProvider).token;
+    if (token == null) {
+      return;
+    }
+
+    setState(() {
+      _isUpdating = true;
+    });
+
+    try {
+      await DeliveryRunRemoteDataSource().updateDeliveryRunStatus(
+        token: token,
+        runId: widget.run.id,
+        status: nextStatus,
+      );
+
+      ref.invalidate(userDeliveryRunsProvider);
+      await ref.read(authProvider.notifier).refreshUser();
+
+      if (!mounted) {
+        return;
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            nextStatus == 'completed'
+                ? 'Ride completed. You earned 10 points.'
+                : 'Ride status updated.',
+          ),
+          backgroundColor: Colors.green,
+        ),
+      );
+    } catch (e) {
+      if (!mounted) {
+        return;
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Failed to update ride: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isUpdating = false;
+        });
+      }
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final run = widget.run;
+    final status = widget.status;
     final isCompleted = status == 'completed';
     final dateTime = isCompleted ? run.deliveryTime : run.pickupTime;
 
@@ -234,7 +298,34 @@ class _RideCard extends StatelessWidget {
               run.description!,
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     color: Colors.grey[600],
-                  ),
+              ),
+            ),
+          ],
+          if (!isCompleted) ...[
+            const SizedBox(height: 16),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: _isUpdating
+                    ? null
+                    : () => _updateStatus(
+                          run.status == 'accepted' ? 'in_progress' : 'completed',
+                        ),
+                icon: Icon(
+                  run.status == 'accepted' ? Icons.play_arrow : Icons.check_circle,
+                ),
+                label: Text(
+                  _isUpdating
+                      ? 'Updating...'
+                      : run.status == 'accepted'
+                          ? 'Start Ride'
+                          : 'Complete Ride (+10 points)',
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppTheme.primaryColor,
+                  foregroundColor: Colors.white,
+                ),
+              ),
             ),
           ],
         ],

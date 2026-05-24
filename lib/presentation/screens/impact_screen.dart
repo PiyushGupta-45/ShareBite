@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:food_donation_app/core/theme/app_theme.dart';
+import 'package:food_donation_app/data/datasources/voucher_remote_datasource.dart';
+import 'package:food_donation_app/domain/entities/redeemed_voucher.dart';
+import 'package:food_donation_app/domain/entities/voucher.dart';
 import 'package:food_donation_app/presentation/providers/app_providers.dart';
 import 'package:food_donation_app/presentation/screens/ride_details_screen.dart';
 import 'package:food_donation_app/presentation/widgets/app_card.dart';
@@ -14,10 +17,15 @@ class ImpactScreen extends ConsumerWidget {
     final stats = ref.watch(gamificationStatsProvider);
     final authState = ref.watch(authProvider);
     final user = authState.user;
+    final vouchers = ref.watch(activeVouchersProvider);
+    final redeemedVouchers = ref.watch(redeemedVouchersProvider);
 
     return RefreshIndicator(
       onRefresh: () async {
         ref.invalidate(gamificationStatsProvider);
+        ref.invalidate(activeVouchersProvider);
+        ref.invalidate(redeemedVouchersProvider);
+        await ref.read(authProvider.notifier).refreshUser();
       },
       child: SingleChildScrollView(
         physics: const AlwaysScrollableScrollPhysics(),
@@ -28,6 +36,8 @@ class ImpactScreen extends ConsumerWidget {
               const SizedBox(height: 16),
               // User Info Card
               if (user != null) _UserInfoCard(user: user),
+              const SizedBox(height: 16),
+              if (user != null) _RewardsCard(user: user),
               const SizedBox(height: 16),
               // Hero Stats Card
               _HeroStatsCard(stats: data),
@@ -48,6 +58,24 @@ class ImpactScreen extends ConsumerWidget {
                 ),
               ),
               const SizedBox(height: 24),
+              if (user?.isVolunteer ?? false) ...[
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Text(
+                    'Redeem Vouchers',
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                          fontWeight: FontWeight.bold,
+                          color: AppTheme.primaryColor,
+                        ),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                _VouchersSection(
+                  vouchers: vouchers,
+                  redeemedVouchers: redeemedVouchers,
+                ),
+                const SizedBox(height: 24),
+              ],
               // Badges
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -101,6 +129,278 @@ class ImpactScreen extends ConsumerWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+class _RewardsCard extends StatelessWidget {
+  const _RewardsCard({required this.user});
+
+  final dynamic user;
+
+  @override
+  Widget build(BuildContext context) {
+    return AppCard(
+      margin: const EdgeInsets.symmetric(horizontal: 16),
+      child: Row(
+        children: [
+          Expanded(
+            child: _RewardMetric(
+              label: 'Completed rides',
+              value: '${user.completedRides}',
+              icon: Icons.delivery_dining,
+              color: AppTheme.primaryColor,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: _RewardMetric(
+              label: 'Reward points',
+              value: '${user.rewardPoints}',
+              icon: Icons.stars,
+              color: Colors.amber.shade700,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _RewardMetric extends StatelessWidget {
+  const _RewardMetric({
+    required this.label,
+    required this.value,
+    required this.icon,
+    required this.color,
+  });
+
+  final String label;
+  final String value;
+  final IconData icon;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, color: color),
+          const SizedBox(height: 12),
+          Text(
+            value,
+            style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                  fontWeight: FontWeight.bold,
+                  color: color,
+                ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            label,
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: Colors.grey[700],
+                ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _VouchersSection extends ConsumerWidget {
+  const _VouchersSection({
+    required this.vouchers,
+    required this.redeemedVouchers,
+  });
+
+  final AsyncValue<List<Voucher>> vouchers;
+  final AsyncValue<List<RedeemedVoucher>> redeemedVouchers;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final user = ref.watch(authProvider).user;
+    final token = ref.watch(authProvider).token;
+
+    return Column(
+      children: [
+        vouchers.when(
+          data: (items) {
+            if (items.isEmpty) {
+              return Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: AppCard(
+                  child: Text(
+                    'No vouchers available right now.',
+                    style: Theme.of(context).textTheme.bodyMedium,
+                  ),
+                ),
+              );
+            }
+
+            return Column(
+              children: items.map((voucher) {
+                final canRedeem = (user?.rewardPoints ?? 0) >= voucher.pointsRequired;
+                return AppCard(
+                  margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              voucher.title,
+                              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                            ),
+                          ),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                            decoration: BoxDecoration(
+                              color: AppTheme.primaryColor.withOpacity(0.12),
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: Text('${voucher.pointsRequired} pts'),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      if ((voucher.discountValue ?? '').isNotEmpty)
+                        Text(
+                          voucher.discountValue!,
+                          style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                                color: AppTheme.primaryColor,
+                                fontWeight: FontWeight.w600,
+                              ),
+                        ),
+                      if ((voucher.description ?? '').isNotEmpty) ...[
+                        const SizedBox(height: 4),
+                        Text(voucher.description!),
+                      ],
+                      const SizedBox(height: 8),
+                      Text(
+                        'Code: ${voucher.code}',
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: Colors.grey[700],
+                            ),
+                      ),
+                      const SizedBox(height: 12),
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton(
+                          onPressed: !canRedeem || token == null
+                              ? null
+                              : () async {
+                                  try {
+                                    await VoucherRemoteDataSource().redeemVoucher(
+                                      token: token,
+                                      voucherId: voucher.id,
+                                    );
+                                    ref.invalidate(activeVouchersProvider);
+                                    ref.invalidate(redeemedVouchersProvider);
+                                    await ref.read(authProvider.notifier).refreshUser();
+
+                                    if (context.mounted) {
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        SnackBar(
+                                          content: Text('Voucher ${voucher.code} redeemed successfully.'),
+                                          backgroundColor: Colors.green,
+                                        ),
+                                      );
+                                    }
+                                  } catch (e) {
+                                    if (context.mounted) {
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        SnackBar(
+                                          content: Text('Redeem failed: $e'),
+                                          backgroundColor: Colors.red,
+                                        ),
+                                      );
+                                    }
+                                  }
+                                },
+                          child: Text(
+                            canRedeem ? 'Redeem Voucher' : 'Need ${voucher.pointsRequired - (user?.rewardPoints ?? 0)} more points',
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              }).toList(),
+            );
+          },
+          loading: () => const Padding(
+            padding: EdgeInsets.all(16),
+            child: Center(child: CircularProgressIndicator()),
+          ),
+          error: (error, _) => Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Text('Failed to load vouchers: $error'),
+          ),
+        ),
+        const SizedBox(height: 16),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: Align(
+            alignment: Alignment.centerLeft,
+            child: Text(
+              'Redeemed History',
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+            ),
+          ),
+        ),
+        const SizedBox(height: 8),
+        redeemedVouchers.when(
+          data: (items) {
+            if (items.isEmpty) {
+              return Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: AppCard(
+                  child: Text(
+                    'No redeemed vouchers yet.',
+                    style: Theme.of(context).textTheme.bodyMedium,
+                  ),
+                ),
+              );
+            }
+
+            return Column(
+              children: items.map((voucher) {
+                return AppCard(
+                  margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                  child: ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: const Icon(Icons.redeem),
+                    title: Text(voucher.title),
+                    subtitle: Text('${voucher.code} • ${voucher.pointsUsed} points used'),
+                    trailing: Text(
+                      '${voucher.redeemedAt.day}/${voucher.redeemedAt.month}/${voucher.redeemedAt.year}',
+                    ),
+                  ),
+                );
+              }).toList(),
+            );
+          },
+          loading: () => const Padding(
+            padding: EdgeInsets.all(16),
+            child: Center(child: CircularProgressIndicator()),
+          ),
+          error: (error, _) => Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Text('Failed to load redeemed vouchers: $error'),
+          ),
+        ),
+      ],
     );
   }
 }

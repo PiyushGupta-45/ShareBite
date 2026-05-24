@@ -6,6 +6,7 @@ class NGODemand {
     required this.amount,
     required this.unit,
     required this.requiredBy,
+    this.restaurantId,
     this.description,
     this.status = 'pending',
     this.acceptedBy,
@@ -24,6 +25,7 @@ class NGODemand {
   final int amount;
   final String unit; // 'meals', 'kg', 'plates'
   final DateTime requiredBy;
+  final String? restaurantId;
   final String? description;
   final String status; // 'pending', 'accepted', 'fulfilled', 'ignored'
   final String? acceptedBy;
@@ -45,6 +47,7 @@ class NGODemand {
       amount: (json['amount'] as num).toInt(),
       unit: json['unit'] as String,
       requiredBy: DateTime.parse(json['requiredBy'] as String),
+      restaurantId: json['restaurantId'] as String?,
       description: json['description'] as String?,
       status: json['status'] as String? ?? 'pending',
       acceptedBy: json['acceptedBy'] as String?,
@@ -70,6 +73,7 @@ class NGODemand {
       'amount': amount,
       'unit': unit,
       'requiredBy': requiredBy.toIso8601String(),
+      'restaurantId': restaurantId,
       'description': description,
       'status': status,
       'acceptedBy': acceptedBy,

@@ -2,10 +2,12 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:food_donation_app/core/theme/app_theme.dart';
+import 'package:food_donation_app/data/datasources/delivery_run_remote_datasource.dart';
 import 'package:food_donation_app/domain/entities/restaurant.dart';
 import 'package:food_donation_app/domain/entities/ngo_demand.dart';
 import 'package:food_donation_app/presentation/providers/app_providers.dart';
 import 'package:food_donation_app/presentation/screens/accept_delivery_screen.dart';
+import 'package:food_donation_app/presentation/screens/ride_details_screen.dart';
 import 'package:food_donation_app/presentation/widgets/app_card.dart';
 import 'package:food_donation_app/presentation/widgets/primary_button.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -33,6 +35,7 @@ class _RunsScreenState extends ConsumerState<RunsScreen> {
   Widget build(BuildContext context) {
     final restaurants = ref.watch(restaurantsProvider);
     final acceptedDemands = ref.watch(acceptedNgoDemandsForVolunteersProvider);
+    final userRuns = ref.watch(userDeliveryRunsProvider);
 
     return Column(
       children: [
@@ -60,7 +63,7 @@ class _RunsScreenState extends ConsumerState<RunsScreen> {
                   _FilterChip(
                     label: '<5 km',
                     isSelected: _selectedFilter == RestaurantFilter.nearby,
-                    onTap: () => setState(() => _selectedFilter == RestaurantFilter.nearby),
+                    onTap: () => setState(() => _selectedFilter = RestaurantFilter.nearby),
                   ),
                 ],
               ),
@@ -70,7 +73,18 @@ class _RunsScreenState extends ConsumerState<RunsScreen> {
         // Restaurant Accepted Demands Section (for volunteers)
         acceptedDemands.when(
           data: (demands) {
-            if (demands.isNotEmpty) {
+            final activeRunKeys = userRuns.maybeWhen(
+              data: (runs) => runs
+                  .where((run) => run.status == 'accepted' || run.status == 'in_progress')
+                  .map((run) => '${run.restaurantId}_${run.ngoId}')
+                  .toSet(),
+              orElse: () => <String>{},
+            );
+            final availableDemands = demands
+                .where((demand) => !activeRunKeys.contains('${demand.restaurantId}_${demand.ngoId}'))
+                .toList();
+
+            if (availableDemands.isNotEmpty) {
               return Expanded(
                 flex: 2,
                 child: Column(
@@ -89,10 +103,10 @@ class _RunsScreenState extends ConsumerState<RunsScreen> {
                     Expanded(
                       child: ListView.builder(
                         padding: const EdgeInsets.symmetric(horizontal: 16),
-                        itemCount: demands.length,
+                        itemCount: availableDemands.length,
                         itemBuilder: (context, index) {
                           return _RestaurantAcceptedDemandCard(
-                            demand: demands[index],
+                            demand: availableDemands[index],
                             userLat: userLatitude ?? 0.0,
                             userLon: userLongitude ?? 0.0,
                           );
@@ -237,7 +251,7 @@ class _RestaurantAcceptedDemandCard extends ConsumerStatefulWidget {
 }
 
 class _RestaurantAcceptedDemandCardState extends ConsumerState<_RestaurantAcceptedDemandCard> {
-  bool _isAccepted = false;
+  bool _isAccepting = false;
 
   Future<void> _openGoogleMaps() async {
     final demand = widget.demand;
@@ -362,123 +376,101 @@ class _RestaurantAcceptedDemandCardState extends ConsumerState<_RestaurantAccept
           ),
           const SizedBox(height: 12),
           // Actions
-          if (!_isAccepted)
-            Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton.icon(
-                    onPressed: demand.ngoLatitude != null && demand.ngoLongitude != null ? _openGoogleMaps : null,
-                    icon: const Icon(Icons.directions, size: 16),
-                    label: const Text('Navigate'),
-                    style: OutlinedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 8),
-                    ),
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: demand.ngoLatitude != null && demand.ngoLongitude != null ? _openGoogleMaps : null,
+                  icon: const Icon(Icons.directions, size: 16),
+                  label: const Text('Navigate'),
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 8),
                   ),
                 ),
-                const SizedBox(width: 8),
-                Expanded(
-                  flex: 2,
-                  child: PrimaryButton(
-                    label: 'Accept',
-                    icon: Icons.check_circle,
-                    onPressed: () async {
-                      // Show NGO location after accepting
-                      if (demand.ngoLocation != null || demand.ngoAddress != null) {
-                        final location = demand.ngoAddress ?? demand.ngoLocation ?? 'Location not available';
-                        final lat = demand.ngoLatitude;
-                        final lon = demand.ngoLongitude;
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                flex: 2,
+                child: PrimaryButton(
+                  label: _isAccepting ? 'Accepting...' : 'Accept',
+                  icon: Icons.check_circle,
+                  onPressed: _isAccepting
+                      ? null
+                      : () async {
+                          final token = ref.read(authProvider).token;
 
-                        if (mounted) {
-                          showDialog(
-                            context: context,
-                            builder: (context) => AlertDialog(
-                              title: const Text('Delivery Accepted!'),
-                              content: Column(
-                                mainAxisSize: MainAxisSize.min,
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    'NGO Location:',
-                                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                  ),
-                                  const SizedBox(height: 4),
-                                  Text(location),
-                                  if (lat != null && lon != null) ...[
-                                    const SizedBox(height: 16),
-                                    OutlinedButton.icon(
-                                      onPressed: () async {
-                                        final url = Uri.parse(
-                                          'https://www.google.com/maps/search/?api=1&query=$lat,$lon',
-                                        );
-                                        if (await canLaunchUrl(url)) {
-                                          await launchUrl(url, mode: LaunchMode.externalApplication);
-                                        }
-                                      },
-                                      icon: const Icon(Icons.directions, size: 16),
-                                      label: const Text('Navigate to NGO'),
-                                    ),
-                                  ],
-                                ],
+                          if (token == null) {
+                            return;
+                          }
+
+                          if (demand.restaurantId == null || demand.restaurantId!.isEmpty) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Restaurant mapping is missing for this ride.'),
+                                backgroundColor: Colors.red,
                               ),
-                              actions: [
-                                TextButton(
-                                  onPressed: () {
-                                    Navigator.of(context).pop();
-                                    setState(() {
-                                      _isAccepted = true;
-                                    });
-                                    // Refresh the list
-                                    ref.invalidate(acceptedNgoDemandsForVolunteersProvider);
-                                  },
-                                  child: const Text('OK'),
-                                ),
-                              ],
-                            ),
-                          );
-                        }
-                      } else {
-                        setState(() {
-                          _isAccepted = true;
-                        });
-                        if (mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('Delivery accepted!'),
-                              backgroundColor: Colors.green,
-                            ),
-                          );
-                        }
-                        ref.invalidate(acceptedNgoDemandsForVolunteersProvider);
-                      }
-                    },
-                  ),
+                            );
+                            return;
+                          }
+
+                          setState(() {
+                            _isAccepting = true;
+                          });
+
+                          try {
+                            await DeliveryRunRemoteDataSource().acceptDeliveryRun(
+                              token: token,
+                              restaurantId: demand.restaurantId!,
+                              ngoId: demand.ngoId,
+                              pickupTime: demand.requiredBy.subtract(const Duration(hours: 1)),
+                              deliveryTime: demand.requiredBy,
+                              numberOfMeals: demand.amount,
+                              description: demand.description ?? 'Volunteer pickup for ${demand.formattedAmount}',
+                            );
+
+                            ref.invalidate(userDeliveryRunsProvider);
+                            ref.invalidate(acceptedNgoDemandsForVolunteersProvider);
+                            ref.read(navIndexProvider.notifier).state = 2;
+
+                            if (!mounted) {
+                              return;
+                            }
+
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Ride accepted. Opening activity details.'),
+                                backgroundColor: Colors.green,
+                              ),
+                            );
+
+                            await Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (context) => const RideDetailsScreen(),
+                              ),
+                            );
+                          } catch (e) {
+                            if (!mounted) {
+                              return;
+                            }
+
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text('Failed to accept ride: $e'),
+                                backgroundColor: Colors.red,
+                              ),
+                            );
+                          } finally {
+                            if (mounted) {
+                              setState(() {
+                                _isAccepting = false;
+                              });
+                            }
+                          }
+                        },
                 ),
-              ],
-            )
-          else
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.green.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(8),
               ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.check_circle, color: Colors.green, size: 20),
-                  const SizedBox(width: 8),
-                  Text(
-                    'Accepted',
-                    style: TextStyle(
-                      color: Colors.green,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ],
-              ),
-            ),
+            ],
+          ),
         ],
       ),
     );
